@@ -37,8 +37,8 @@ class InterviewExperience(BaseModel):
     interview_stage: Optional[str] = Field(
         default=None, description="Interview stage: 一面|二面|终面"
     )
-    interview_experience: Optional[int] = Field(
-        default=None, description="Interview experience rating (1-5)", ge=1, le=5
+    interview_experience: Optional[str] = Field(
+        default=None, description="Interview experience description"
     )
 
     # Content
@@ -59,5 +59,6 @@ class ProcessingResult(BaseModel):
     experience: Optional[InterviewExperience] = Field(
         default=None, description="Processed interview experience"
     )
+    output_files: List[str] = Field(default_factory=list, description="Exported file paths")
     error: Optional[str] = Field(default=None, description="Error message if failed")
     processing_time: float = Field(..., description="Processing time in seconds")

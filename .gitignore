@@ -28,11 +28,13 @@ env/
 
 # Environment Variables
 .env
+.env.local
 
 # Output
 output/
 data/*.json
 data/*.md
+data/temp/
 
 # IDE
 .vscode/
@@ -52,6 +54,13 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.production.local
+frontend/.vite/
 
 # private markdown files
 一些新想法.md

@@ -1,5 +1,6 @@
 """SiliconFlow API client."""
 
+import base64
 from typing import Any, Dict, List, Optional
 
 from langchain_openai import ChatOpenAI
@@ -69,13 +70,22 @@ class SiliconFlowClient:
         Returns:
             Extracted text from image
         """
-        # Verify image exists
+        # Verify image exists and read as base64
         try:
+            with open(image_path, "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode("utf-8")
+
+            # Verify it's a valid image
             Image.open(image_path).verify()
         except Exception as e:
             raise ValueError(f"Invalid image file: {image_path}") from e
 
-        # Create message with image
+        # Detect image format
+        image_format = image_path.lower().split(".")[-1]
+        if image_format == "jpg":
+            image_format = "jpeg"
+
+        # Create message with base64 encoded image
         messages = [
             {
                 "role": "user",
@@ -83,7 +93,7 @@ class SiliconFlowClient:
                     {"type": "text", "text": prompt},
                     {
                         "type": "image_url",
-                        "image_url": {"url": f"file://{image_path}"},
+                        "image_url": {"url": f"data:image/{image_format};base64,{image_data}"},
                     },
                 ],
             }

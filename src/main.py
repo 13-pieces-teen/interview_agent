@@ -95,7 +95,10 @@ class InterviewAgent:
             self._display_success(experience, exported_files, processing_time)
 
             return ProcessingResult(
-                success=True, experience=experience, processing_time=processing_time
+                success=True,
+                experience=experience,
+                output_files=exported_files,
+                processing_time=processing_time,
             )
 
         except Exception as e:
