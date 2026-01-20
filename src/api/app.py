@@ -4,14 +4,18 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
+from threading import Thread
 import os
 import time
+import uuid
 from datetime import datetime
 
 from src.main import InterviewAgent
 from src.utils.config import Config
 from src.models.schema import InterviewExperience
+from src.utils.database import Database
+from src.validators.content_validator import validate_content
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -32,6 +36,7 @@ app.add_middleware(
 # Load config and initialize agent
 config = Config.from_env()
 agent = InterviewAgent(config)
+db = Database()
 
 
 # Request/Response models
@@ -49,8 +54,11 @@ class ProcessResponse(BaseModel):
     success: bool
     processing_time: float
     experience: Optional[dict] = None
+    experience_id: Optional[str] = None  # Added for saved experience ID
     output_files: List[str] = []
     error: Optional[str] = None
+    validation_score: Optional[int] = None  # Content validation score
+    validation_message: Optional[str] = None  # Validation message
 
 
 class HealthResponse(BaseModel):
@@ -59,6 +67,20 @@ class HealthResponse(BaseModel):
     status: str
     timestamp: str
     version: str
+
+
+class ValidationRequest(BaseModel):
+    """Request model for content validation."""
+
+    content: str
+
+
+class ValidationResponse(BaseModel):
+    """Response model for content validation."""
+
+    is_valid: bool
+    confidence_score: int
+    message: str
 
 
 @app.get("/", response_model=HealthResponse)
@@ -81,6 +103,30 @@ async def health():
     )
 
 
+@app.post("/api/validate", response_model=ValidationResponse)
+async def validate_text(request: ValidationRequest):
+    """
+    Validate if content is interview experience related.
+
+    Args:
+        request: Request containing content to validate
+
+    Returns:
+        ValidationResponse with validation results
+    """
+    try:
+        is_valid, confidence_score, message = validate_content(request.content)
+
+        return ValidationResponse(
+            is_valid=is_valid,
+            confidence_score=confidence_score,
+            message=message,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/process/text", response_model=ProcessResponse)
 async def process_text(request: ProcessTextRequest):
     """
@@ -95,27 +141,49 @@ async def process_text(request: ProcessTextRequest):
     try:
         start_time = time.time()
 
+        # Validate content first
+        is_valid, validation_score, validation_message = validate_content(request.content)
+
+        if not is_valid:
+            processing_time = time.time() - start_time
+            return ProcessResponse(
+                success=False,
+                processing_time=processing_time,
+                error=validation_message,
+                validation_score=validation_score,
+                validation_message=validation_message,
+            )
+
         # Process the interview experience
         result = agent.process(
             input_data=request.content,
-            generate_answers=request.generate_answers,
             export_format=request.export_format,
         )
 
         processing_time = time.time() - start_time
 
         if result.success:
+            # Auto-save to database
+            experience_id = None
+            if result.experience:
+                experience_id = db.save_experience(result.experience, processing_time)
+
             return ProcessResponse(
                 success=True,
                 processing_time=processing_time,
                 experience=result.experience.model_dump() if result.experience else None,
+                experience_id=experience_id,
                 output_files=result.output_files,
+                validation_score=validation_score,
+                validation_message=validation_message,
             )
         else:
             return ProcessResponse(
                 success=False,
                 processing_time=processing_time,
                 error=result.error,
+                validation_score=validation_score,
+                validation_message=validation_message,
             )
 
     except Exception as e:
@@ -175,7 +243,6 @@ async def process_images(
             # Process the combined text
             result = agent.process(
                 input_data=full_text,
-                generate_answers=generate_answers,
                 export_format=export_format,
             )
 
@@ -239,17 +306,22 @@ async def process_image(
             # Process the image
             result = agent.process(
                 input_data=temp_file_path,
-                generate_answers=generate_answers,
                 export_format=export_format,
             )
 
             processing_time = time.time() - start_time
 
             if result.success:
+                # Auto-save to database
+                experience_id = None
+                if result.experience:
+                    experience_id = db.save_experience(result.experience, processing_time)
+
                 return ProcessResponse(
                     success=True,
                     processing_time=processing_time,
                     experience=result.experience.model_dump() if result.experience else None,
+                    experience_id=experience_id,
                     output_files=result.output_files,
                 )
             else:
@@ -332,6 +404,372 @@ async def list_files():
         files.sort(key=lambda x: x["modified_at"], reverse=True)
 
         return {"files": files}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Database API endpoints
+@app.get("/api/experiences")
+async def list_experiences(
+    company_name: Optional[str] = None,
+    company_scale: Optional[str] = None,
+    tags: Optional[str] = None,  # Comma-separated tags
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    interview_stage: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """
+    List saved interview experiences with filtering and pagination.
+
+    Args:
+        company_name: Filter by company name (partial match)
+        company_scale: Filter by company scale
+        tags: Comma-separated tags to filter by
+        start_date: Filter by start date (ISO format)
+        end_date: Filter by end date (ISO format)
+        interview_stage: Filter by interview stage
+        limit: Maximum number of results (default 50)
+        offset: Offset for pagination (default 0)
+
+    Returns:
+        List of experiences with metadata
+    """
+    try:
+        tag_list = [t.strip() for t in tags.split(",")] if tags else None
+
+        experiences = db.list_experiences(
+            company_name=company_name,
+            company_scale=company_scale,
+            tags=tag_list,
+            start_date=start_date,
+            end_date=end_date,
+            interview_stage=interview_stage,
+            limit=limit,
+            offset=offset,
+        )
+
+        return {"experiences": experiences, "count": len(experiences)}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/experiences/{experience_id}")
+async def get_experience(experience_id: str):
+    """
+    Get a specific interview experience by ID.
+
+    Args:
+        experience_id: ID of the experience to retrieve
+
+    Returns:
+        Full experience data including all questions
+    """
+    try:
+        experience = db.get_experience(experience_id)
+
+        if not experience:
+            raise HTTPException(status_code=404, detail="Experience not found")
+
+        return {"experience": experience.model_dump()}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/experiences/{experience_id}")
+async def delete_experience(experience_id: str):
+    """
+    Delete an interview experience by ID.
+
+    Args:
+        experience_id: ID of the experience to delete
+
+    Returns:
+        Success message
+    """
+    try:
+        deleted = db.delete_experience(experience_id)
+
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Experience not found")
+
+        return {"success": True, "message": "Experience deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class UpdateExperienceRequest(BaseModel):
+    """Request model for updating experience."""
+
+    company_name: Optional[str] = None
+    company_scale: Optional[str] = None
+    position: Optional[str] = None
+    interview_stage: Optional[str] = None
+    interview_experience: Optional[str] = None
+    tags: Optional[List[str]] = None
+    questions: Optional[List[dict]] = None
+
+
+@app.put("/api/experiences/{experience_id}")
+async def update_experience(experience_id: str, request: UpdateExperienceRequest):
+    """
+    Update an interview experience.
+
+    Args:
+        experience_id: ID of the experience to update
+        request: Fields to update
+
+    Returns:
+        Updated experience
+    """
+    try:
+        # Get existing experience
+        experience = db.get_experience(experience_id)
+        if not experience:
+            raise HTTPException(status_code=404, detail="Experience not found")
+
+        # Update fields
+        if request.company_name is not None:
+            experience.company_name = request.company_name
+        if request.company_scale is not None:
+            experience.company_scale = request.company_scale
+        if request.position is not None:
+            experience.position = request.position
+        if request.interview_stage is not None:
+            experience.interview_stage = request.interview_stage
+        if request.interview_experience is not None:
+            experience.interview_experience = request.interview_experience
+        if request.tags is not None:
+            experience.tags = request.tags
+        if request.questions is not None:
+            from src.models.schema import Question
+            experience.questions = [Question(**q) for q in request.questions]
+
+        # Save back to database
+        db.save_experience(experience)
+
+        return {"success": True, "experience": experience.model_dump()}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/tags")
+async def get_all_tags():
+    """
+    Get all unique tags from saved experiences.
+
+    Returns:
+        List of tags sorted by frequency
+    """
+    try:
+        tags = db.get_all_tags()
+        return {"tags": tags}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/companies")
+async def get_all_companies():
+    """
+    Get all unique company names from saved experiences.
+
+    Returns:
+        List of company names
+    """
+    try:
+        companies = db.get_all_companies()
+        return {"companies": companies}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/stats")
+async def get_stats():
+    """
+    Get database statistics.
+
+    Returns:
+        Statistics about saved experiences
+    """
+    try:
+        stats = db.get_stats()
+        return stats
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Answer generation task tracking
+answer_generation_tasks: Dict[str, dict] = {}
+
+
+@app.post("/api/experiences/{experience_id}/generate-answers")
+async def generate_answers_async(experience_id: str):
+    """
+    Start async answer generation for an experience.
+
+    This endpoint starts a background task to generate answers for questions
+    that don't have answers. Returns immediately with a task ID.
+
+    Args:
+        experience_id: ID of the experience to generate answers for
+
+    Returns:
+        Task information including task_id and status
+    """
+    try:
+        # Get experience from database
+        experience = db.get_experience(experience_id)
+        if not experience:
+            raise HTTPException(status_code=404, detail="Experience not found")
+
+        # Check if there are questions without answers
+        questions_without_answers = [
+            q for q in experience.questions if not q.answer or not q.has_original_answer
+        ]
+
+        if not questions_without_answers:
+            return {
+                "message": "All questions already have answers",
+                "questions_count": len(experience.questions),
+            }
+
+        # Create task
+        task_id = str(uuid.uuid4())
+        answer_generation_tasks[task_id] = {
+            "status": "pending",
+            "experience_id": experience_id,
+            "progress": 0,
+            "total_questions": len(questions_without_answers),
+            "created_at": datetime.utcnow().isoformat(),
+        }
+
+        # Start background thread
+        thread = Thread(
+            target=_generate_answers_background,
+            args=(task_id, experience_id),
+            daemon=True
+        )
+        thread.start()
+
+        return {
+            "task_id": task_id,
+            "status": "started",
+            "message": f"Answer generation started for {len(questions_without_answers)} questions",
+            "total_questions": len(questions_without_answers),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _generate_answers_background(task_id: str, experience_id: str):
+    """Background worker to generate answers."""
+    try:
+        # Update status
+        answer_generation_tasks[task_id]["status"] = "processing"
+
+        # Get experience
+        experience = db.get_experience(experience_id)
+        if not experience:
+            answer_generation_tasks[task_id]["status"] = "failed"
+            answer_generation_tasks[task_id]["error"] = "Experience not found"
+            return
+
+        # Generate answers using AnswerGeneratorAgent
+        from src.agents.answer_generator import AnswerGeneratorAgent
+
+        generator = AnswerGeneratorAgent(agent.client)
+        generated_answers = generator.generate_answers(experience.questions)
+
+        # Update questions with generated answers
+        for i, answer in enumerate(generated_answers):
+            if answer and not experience.questions[i].has_original_answer:
+                experience.questions[i].answer = answer
+                # Keep has_original_answer as False for generated answers
+
+        # Save back to database
+        db.save_experience(experience)
+
+        # Update task status
+        answer_generation_tasks[task_id]["status"] = "completed"
+        answer_generation_tasks[task_id]["progress"] = len(
+            [q for q in experience.questions if not q.has_original_answer and q.answer]
+        )
+        answer_generation_tasks[task_id]["completed_at"] = datetime.utcnow().isoformat()
+
+    except Exception as e:
+        answer_generation_tasks[task_id]["status"] = "failed"
+        answer_generation_tasks[task_id]["error"] = str(e)
+        print(f"Error generating answers for task {task_id}: {e}")
+
+
+@app.get("/api/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    """
+    Get the status of an answer generation task.
+
+    Args:
+        task_id: Task ID returned from generate-answers endpoint
+
+    Returns:
+        Task status information
+    """
+    if task_id not in answer_generation_tasks:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return answer_generation_tasks[task_id]
+
+
+@app.get("/api/questions/grouped")
+async def get_grouped_questions(
+    search: Optional[str] = None,
+    tags: Optional[str] = None,
+    company_name: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """
+    Get questions grouped by question text with all occurrences.
+
+    Args:
+        search: Search query for question text
+        tags: Comma-separated tags to filter by
+        company_name: Filter by company name
+        limit: Maximum number of question groups to return
+        offset: Offset for pagination
+
+    Returns:
+        List of question groups with all occurrences
+    """
+    try:
+        tag_list = [t.strip() for t in tags.split(",")] if tags else None
+
+        groups = db.get_grouped_questions(
+            search=search,
+            tags=tag_list,
+            company_name=company_name,
+            limit=limit,
+            offset=offset,
+        )
+
+        return {"total": len(groups), "groups": groups}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

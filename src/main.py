@@ -70,9 +70,7 @@ class InterviewAgent:
 
                 # Step 2: Core processing
                 task2 = progress.add_task("[cyan]Analyzing content...", total=None)
-                experience = self.core_processor.process(
-                    text_content, source_type, generate_answers
-                )
+                experience = self.core_processor.process(text_content, source_type)
                 progress.update(task2, completed=True)
 
                 # Step 3: Export

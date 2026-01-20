@@ -1,4 +1,5 @@
 export interface Question {
+  id: string
   question: string
   answer?: string
   has_original_answer: boolean
@@ -6,6 +7,8 @@ export interface Question {
 }
 
 export interface InterviewExperience {
+  id: string
+  created_at: string
   source_type: string
   company_name?: string
   company_scale?: string
@@ -15,14 +18,24 @@ export interface InterviewExperience {
   questions: Question[]
   tags: string[]
   raw_content: string
+  processing_time?: number
 }
 
 export interface ProcessResponse {
   success: boolean
   processing_time: number
   experience?: InterviewExperience
+  experience_id?: string
   output_files: string[]
   error?: string
+  validation_score?: number
+  validation_message?: string
+}
+
+export interface ValidationResponse {
+  is_valid: boolean
+  confidence_score: number
+  message: string
 }
 
 export interface FileInfo {
@@ -30,4 +43,39 @@ export interface FileInfo {
   size: number
   created_at: string
   modified_at: string
+}
+
+export interface ExperienceListItem {
+  id: string
+  created_at: string
+  source_type: string
+  company_name?: string
+  company_scale?: string
+  position?: string
+  interview_stage?: string
+  interview_experience?: string
+  tags: string[]
+  questions_count: number
+  has_answers: boolean
+  processing_time?: number
+}
+
+export interface QuestionGroup {
+  question: string
+  count: number
+  tags: string[]
+  occurrences: Array<{
+    experience_id: string
+    company_name?: string
+    position?: string
+    interview_stage?: string
+    answer?: string
+    has_original_answer: boolean
+    created_at: string
+  }>
+}
+
+export interface QuestionGroupsResponse {
+  total: number
+  groups: QuestionGroup[]
 }

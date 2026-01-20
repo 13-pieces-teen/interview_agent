@@ -22,7 +22,7 @@ class Config(BaseModel):
         default="Pro/deepseek-ai/DeepSeek-V3.2", description="DeepSeek model name"
     )
     glm_vision_model: str = Field(
-        default="zai-org/GLM-4.6V", description="GLM Vision model name"
+        default="Pro/zai-org/GLM-4.6V", description="GLM Vision model name"
     )
 
     # Directory Configuration

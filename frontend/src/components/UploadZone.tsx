@@ -113,33 +113,33 @@ export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: Uploa
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <div className="flex gap-4 mb-6">
+    <div className="w-full max-w-3xl mx-auto">
+      <div className="flex gap-2 mb-6">
         <button
           onClick={() => setInputMode('text')}
           className={clsx(
-            'flex-1 py-3 px-6 rounded-lg font-medium transition-all',
+            'flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors',
             inputMode === 'text'
-              ? 'bg-primary-600 text-white shadow-lg'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-primary-600 text-white'
+              : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-700'
           )}
           disabled={isProcessing}
         >
-          <FileText className="inline-block mr-2 w-5 h-5" />
-          Text Input
+          <FileText className="inline-block mr-2 w-4 h-4" />
+          文本输入
         </button>
         <button
           onClick={() => setInputMode('image')}
           className={clsx(
-            'flex-1 py-3 px-6 rounded-lg font-medium transition-all',
+            'flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-colors',
             inputMode === 'image'
-              ? 'bg-primary-600 text-white shadow-lg'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-primary-600 text-white'
+              : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-700'
           )}
           disabled={isProcessing}
         >
-          <ImageIcon className="inline-block mr-2 w-5 h-5" />
-          Image Upload ({selectedImages.length})
+          <ImageIcon className="inline-block mr-2 w-4 h-4" />
+          图片上传 {selectedImages.length > 0 && `(${selectedImages.length})`}
         </button>
       </div>
 
@@ -148,24 +148,24 @@ export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: Uploa
           <textarea
             value={textContent}
             onChange={(e) => setTextContent(e.target.value)}
-            placeholder="Paste your interview experience here..."
-            className="w-full h-64 p-4 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+            placeholder="粘贴你的面经内容..."
+            className="w-full h-72 p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-700 resize-none transition-colors text-sm"
             disabled={isProcessing}
           />
           <button
             onClick={handleTextSubmit}
             disabled={!textContent.trim() || isProcessing}
-            className="w-full py-3 px-6 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 px-6 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {isProcessing ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Processing...
+                <Loader2 className="w-4 h-4 animate-spin" />
+                处理中...
               </>
             ) : (
               <>
-                <Upload className="w-5 h-5" />
-                Process Interview Experience
+                <Upload className="w-4 h-4" />
+                开始处理
               </>
             )}
           </button>
@@ -176,12 +176,12 @@ export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: Uploa
           <div
             {...getRootProps()}
             className={clsx(
-              'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all',
+              'border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all',
               isDragActive
-                ? 'border-primary-500 bg-primary-500/10'
-                : 'border-gray-700 hover:border-gray-600 bg-gray-800/50',
+                ? 'border-primary-400 bg-primary-50/50 dark:bg-primary-950/20'
+                : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 bg-white dark:bg-gray-900',
               isProcessing && 'opacity-50 cursor-not-allowed',
-              selectedImages.length > 0 && 'p-6'
+              selectedImages.length > 0 && 'p-8'
             )}
           >
             <input {...getInputProps()} />
@@ -201,85 +201,75 @@ export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: Uploa
 
             {selectedImages.length === 0 ? (
               <>
-                <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                <Upload className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-700" />
                 {isDragActive ? (
-                  <p className="text-lg text-primary-400">Drop images here...</p>
+                  <p className="text-sm text-primary-600">释放文件...</p>
                 ) : (
                   <>
-                    <p className="text-lg text-gray-300 mb-2">
-                      Drag & drop images here, or click to select
+                    <p className="text-sm text-gray-900 dark:text-white mb-1">
+                      拖拽图片到这里，或点击选择文件
                     </p>
-                    <p className="text-sm text-gray-500 mb-3">
-                      Supports PNG, JPG, JPEG, GIF, WebP, BMP
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
+                      支持 PNG、JPG、JPEG、GIF、WebP、BMP
                     </p>
-                    <div className="flex items-center justify-center gap-2 text-sm text-primary-400">
-                      <Clipboard className="w-4 h-4" />
-                      <span>Or press Ctrl+V to paste from clipboard</span>
+                    <div className="flex items-center justify-center gap-2 text-xs text-gray-400 dark:text-gray-600">
+                      <Clipboard className="w-3.5 h-3.5" />
+                      <span>或按 Ctrl+V 从剪贴板粘贴</span>
                     </div>
                   </>
                 )}
               </>
             ) : (
-              <div className="flex items-center justify-center gap-4 text-sm text-gray-400">
+              <div className="flex items-center justify-center gap-4 text-xs text-gray-600 dark:text-gray-400">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     handleSelectFiles()
                   }}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all"
+                  className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-700 dark:text-gray-300"
                 >
-                  Add More Images
+                  添加更多图片
                 </button>
-                <span>or drag & drop more files</span>
-                <div className="flex items-center gap-2 text-primary-400">
-                  <Clipboard className="w-4 h-4" />
-                  <span>Ctrl+V to paste</span>
-                </div>
+                <span>或拖拽文件到这里</span>
               </div>
             )}
           </div>
 
           {/* Image Previews */}
           {selectedImages.length > 0 && (
-            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white font-medium">
-                  Selected Images ({selectedImages.length})
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 transition-colors">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                  已选择 {selectedImages.length} 张图片
                 </h3>
                 <button
                   onClick={clearAllImages}
                   disabled={isProcessing}
-                  className="text-sm text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                  className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50"
                 >
-                  Clear All
+                  清空
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                 {selectedImages.map((file, index) => (
                   <div
                     key={`${file.name}-${index}`}
-                    className="relative group aspect-square bg-gray-900 rounded-lg overflow-hidden border border-gray-700"
+                    className="relative group aspect-square bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800"
                   >
                     <img
                       src={imagePreviews[index]}
                       alt={file.name}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <button
                         onClick={() => removeImage(index)}
                         disabled={isProcessing}
-                        className="p-2 bg-red-600 hover:bg-red-700 rounded-full transition-colors disabled:opacity-50"
+                        className="p-1.5 bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
                       >
-                        <X className="w-4 h-4 text-white" />
+                        <X className="w-3.5 h-3.5 text-white" />
                       </button>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-2">
-                      <p className="text-xs text-gray-300 truncate">{file.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {(file.size / 1024).toFixed(1)} KB
-                      </p>
                     </div>
                   </div>
                 ))}
@@ -291,17 +281,17 @@ export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: Uploa
           <button
             onClick={handleImagesSubmit}
             disabled={selectedImages.length === 0 || isProcessing}
-            className="w-full py-3 px-6 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 px-6 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {isProcessing ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Processing {selectedImages.length} image(s)...
+                <Loader2 className="w-4 h-4 animate-spin" />
+                处理 {selectedImages.length} 张图片中...
               </>
             ) : (
               <>
-                <Upload className="w-5 h-5" />
-                Process {selectedImages.length} Image(s)
+                <Upload className="w-4 h-4" />
+                处理 {selectedImages.length} 张图片
               </>
             )}
           </button>

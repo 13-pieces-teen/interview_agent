@@ -30,20 +30,19 @@ class CoreProcessorAgent:
         self.client = client
 
     def process(
-        self, raw_content: str, source_type: str, generate_answers: bool = False
+        self, raw_content: str, source_type: str
     ) -> InterviewExperience:
         """Process raw interview experience content.
 
         Args:
             raw_content: Raw interview experience text
             source_type: Source type (text or image)
-            generate_answers: Whether to generate missing answers
 
         Returns:
             Processed InterviewExperience object
         """
-        # Generate prompt
-        user_prompt = get_user_prompt(raw_content, generate_answers)
+        # Generate prompt (always without answer generation)
+        user_prompt = get_user_prompt(raw_content, generate_answers=False)
 
         # Call LLM
         response = self.client.process_text(
