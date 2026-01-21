@@ -1,9 +1,9 @@
 """FastAPI application for interview agent."""
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 from threading import Thread
 import os
@@ -18,6 +18,7 @@ from src.utils.database import Database
 from src.validators.content_validator import validate_content
 from src.utils.batch_processor import batch_processor, TaskStatus
 from src.utils.async_task_queue import task_queue, TaskType, Task
+from src.services.export_service import ExportService
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -39,6 +40,7 @@ app.add_middleware(
 config = Config.from_env()
 agent = InterviewAgent(config)
 db = Database()
+export_service = ExportService(db)
 
 
 # Initialize async task queue
@@ -965,6 +967,7 @@ def _generate_answers_background(task_id: str, experience_id: str):
         for i, answer in enumerate(generated_answers):
             if answer and not experience.questions[i].has_original_answer:
                 experience.questions[i].answer = answer
+                experience.questions[i].is_ai_generated = True
                 # Keep has_original_answer as False for generated answers
 
         # Save back to database
@@ -998,6 +1001,39 @@ async def get_task_status(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
 
     return answer_generation_tasks[task_id]
+
+
+@app.get("/api/tasks/answer-generation")
+async def list_answer_generation_tasks(
+    status: Optional[str] = Query(None, description="Filter by status: pending, processing, completed, failed")
+):
+    """
+    List all active and recently completed answer generation tasks.
+
+    Args:
+        status: Optional filter by task status
+
+    Returns:
+        Dictionary containing list of tasks with their current status
+    """
+    tasks_list = []
+
+    for task_id, task_data in answer_generation_tasks.items():
+        # Filter by status if provided
+        if status and task_data["status"] != status:
+            continue
+
+        tasks_list.append({
+            "task_id": task_id,
+            "experience_id": task_data["experience_id"],
+            "status": task_data["status"],
+            "progress": task_data["progress"],
+            "total_questions": task_data["total_questions"],
+            "created_at": task_data["created_at"],
+            "completed_at": task_data.get("completed_at"),
+        })
+
+    return {"tasks": tasks_list}
 
 
 @app.get("/api/questions/grouped")
@@ -1036,6 +1072,100 @@ async def get_grouped_questions(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class ExportRequest(BaseModel):
+    """Request model for exporting experiences."""
+
+    export_type: str = Field(..., description="Export type: by_interview | by_question")
+    experience_ids: Optional[List[str]] = Field(default=None, description="Specific experience IDs to export")
+    company_name: Optional[str] = Field(default=None, description="Filter by company name")
+    tags: Optional[List[str]] = Field(default=None, description="Filter by tags")
+
+
+@app.post("/api/export")
+async def export_markdown(request: ExportRequest):
+    """
+    Export interview experiences as markdown.
+
+    Args:
+        request: Export configuration
+
+    Returns:
+        Markdown content with download filename
+    """
+    try:
+        if request.export_type == "by_interview":
+            markdown_content = export_service.export_by_interview(
+                experience_ids=request.experience_ids,
+                company_name=request.company_name,
+                tags=request.tags,
+            )
+            filename = f"interviews_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        elif request.export_type == "by_question":
+            markdown_content = export_service.export_by_question(
+                company_name=request.company_name,
+                tags=request.tags,
+            )
+            filename = f"questions_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid export_type. Must be 'by_interview' or 'by_question'"
+            )
+
+        return {
+            "content": markdown_content,
+            "filename": filename,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export/excel")
+async def export_excel(request: ExportRequest):
+    """
+    Export interview questions as Excel file.
+
+    Args:
+        request: Export configuration
+
+    Returns:
+        Excel file response
+    """
+    try:
+        # Only support by_question export for Excel
+        if request.export_type != "by_question":
+            raise HTTPException(
+                status_code=400,
+                detail="Excel export only supports 'by_question' type"
+            )
+
+        excel_content = export_service.export_questions_to_excel(
+            company_name=request.company_name,
+            tags=request.tags,
+        )
+
+        filename = f"questions_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+        from fastapi.responses import Response
+
+        return Response(
+            content=excel_content,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # ============ 异步任务队列 API ============

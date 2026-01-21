@@ -140,7 +140,7 @@ export function QuestionGroupView({ groups, onExperienceClick }: QuestionGroupVi
                         <div>
                           <div className="flex items-center gap-2 mb-2">
                             <p className="text-xs text-gray-500 dark:text-gray-500">回答</p>
-                            {!occurrence.has_original_answer && (
+                            {occurrence.is_ai_generated && (
                               <span className="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded text-xs">
                                 AI 生成
                               </span>

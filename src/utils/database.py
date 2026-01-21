@@ -431,6 +431,7 @@ class Database:
                     "interview_stage": exp_stage,
                     "answer": q.get("answer"),
                     "has_original_answer": q.get("has_original_answer", False),
+                    "is_ai_generated": q.get("is_ai_generated", False),
                     "created_at": exp_created_at,
                 })
 

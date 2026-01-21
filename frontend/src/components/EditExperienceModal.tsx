@@ -36,6 +36,10 @@ export function EditExperienceModal({ experience, onClose, onSave }: EditExperie
       ...updatedQuestions[index],
       [field]: value,
     }
+    // If answer is being edited, clear the is_ai_generated flag
+    if (field === 'answer' && value !== updatedQuestions[index].answer) {
+      updatedQuestions[index].is_ai_generated = false
+    }
     setFormData((prev) => ({
       ...prev,
       questions: updatedQuestions,
@@ -52,6 +56,7 @@ export function EditExperienceModal({ experience, onClose, onSave }: EditExperie
           question: '',
           answer: '',
           has_original_answer: false,
+          is_ai_generated: false,
           tags: [],
         },
       ],

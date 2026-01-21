@@ -7,7 +7,8 @@ import type {
   ValidationResponse,
   QuestionGroupsResponse,
   AnswerGenerationTaskResponse,
-  AnswerGenerationTaskStatus
+  AnswerGenerationTaskStatus,
+  AnswerGenerationTaskList
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
@@ -370,4 +371,66 @@ export const getAnswerGenerationTaskStatus = async (
 ): Promise<AnswerGenerationTaskStatus> => {
   const response = await api.get(`/tasks/answer-generation/${taskId}`)
   return response.data
+}
+
+export const listAnswerGenerationTasks = async (): Promise<AnswerGenerationTaskList> => {
+  const response = await api.get('/tasks/answer-generation')
+  return response.data
+}
+
+// Export API functions
+export const exportMarkdown = async (params: {
+  exportType: 'by_interview' | 'by_question'
+  experienceIds?: string[]
+  companyName?: string
+  tags?: string[]
+}): Promise<{ content: string; filename: string }> => {
+  const response = await api.post('/export', {
+    export_type: params.exportType,
+    experience_ids: params.experienceIds,
+    company_name: params.companyName,
+    tags: params.tags,
+  })
+  return response.data
+}
+
+export const exportExcel = async (params: {
+  exportType: 'by_interview' | 'by_question'
+  companyName?: string
+  tags?: string[]
+}): Promise<void> => {
+  const response = await api.post(
+    '/export/excel',
+    {
+      export_type: params.exportType,
+      company_name: params.companyName,
+      tags: params.tags,
+    },
+    {
+      responseType: 'blob', // Important for binary data
+    }
+  )
+
+  // Extract filename from Content-Disposition header
+  const contentDisposition = response.headers['content-disposition']
+  let filename = 'questions_export.xlsx'
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename=(.+)/)
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1]
+    }
+  }
+
+  // Create download link
+  const blob = new Blob([response.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }

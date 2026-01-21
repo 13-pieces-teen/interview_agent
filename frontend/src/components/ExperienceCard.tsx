@@ -1,4 +1,4 @@
-import { Building2, Calendar, Tag, FileText, Loader2, Sparkles } from 'lucide-react'
+import { Building2, Calendar, Tag, FileText, Loader2, Sparkles, Trash2 } from 'lucide-react'
 import type { ExperienceListItem } from '../types'
 
 interface ExperienceCardProps {
@@ -35,6 +35,17 @@ export function ExperienceCard({ experience, onClick, onDelete, onGenerateAnswer
       }`}
       onClick={onClick}
     >
+      {/* 删除按钮 - 在右上角 */}
+      {!experience.is_generating_answers && (
+        <button
+          onClick={handleDelete}
+          className="absolute top-4 right-4 p-2 bg-white dark:bg-gray-900 hover:bg-red-50 dark:hover:bg-red-900/20 border border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-all opacity-0 group-hover:opacity-100 z-10 shadow-sm"
+          title="删除面经"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+
       {/* AI答案生成中指示器 */}
       {experience.is_generating_answers && (
         <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-medium shadow-sm z-10">

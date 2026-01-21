@@ -145,7 +145,7 @@ export const ResultsView = ({ experience, processingTime, onUpdate }: ResultsVie
                 <div className="ml-9 mb-3">
                   <p className="text-xs text-gray-500 dark:text-gray-500 mb-2">回答</p>
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{q.answer}</p>
-                  {!q.has_original_answer && (
+                  {q.is_ai_generated && (
                     <span className="inline-block mt-3 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded text-xs">
                       AI 生成
                     </span>

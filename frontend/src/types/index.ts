@@ -3,6 +3,7 @@ export interface Question {
   question: string
   answer?: string
   has_original_answer: boolean
+  is_ai_generated?: boolean
   tags: string[]
 }
 
@@ -74,6 +75,7 @@ export interface QuestionGroup {
     interview_stage?: string
     answer?: string
     has_original_answer: boolean
+    is_ai_generated?: boolean
     created_at: string
   }>
 }
@@ -98,4 +100,18 @@ export interface AnswerGenerationTaskStatus {
   created_at: string
   completed_at?: string
   error?: string
+}
+
+export interface AnswerGenerationTask {
+  task_id: string
+  experience_id: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  progress: number
+  total_questions: number
+  created_at: string
+  completed_at?: string
+}
+
+export interface AnswerGenerationTaskList {
+  tasks: AnswerGenerationTask[]
 }
