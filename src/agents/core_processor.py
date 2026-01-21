@@ -40,6 +40,9 @@ class CoreProcessorAgent:
 
         Returns:
             Processed InterviewExperience object
+
+        Raises:
+            ValueError: If LLM response cannot be parsed or has invalid structure
         """
         # Generate prompt (always without answer generation)
         user_prompt = get_user_prompt(raw_content, generate_answers=False)
@@ -50,10 +53,18 @@ class CoreProcessorAgent:
         )
 
         # Parse JSON response
-        parsed_data = self._parse_response(response)
+        try:
+            parsed_data = self._parse_response(response)
+        except ValueError as e:
+            # This is a real JSON parsing error
+            raise ValueError(f"LLM返回的不是有效JSON格式: {str(e)}")
 
         # Convert to InterviewExperience object
-        experience = self._build_experience(parsed_data, raw_content, source_type)
+        try:
+            experience = self._build_experience(parsed_data, raw_content, source_type)
+        except (KeyError, ValueError, TypeError) as e:
+            # This is a validation/structure error
+            raise ValueError(f"LLM返回的数据结构不完整或格式错误: {str(e)}\n请稍后重试或使用不同的内容。")
 
         return experience
 
@@ -82,7 +93,7 @@ class CoreProcessorAgent:
         try:
             return json.loads(response)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse LLM response as JSON: {e}\nResponse: {response}")
+            raise ValueError(f"JSON解析失败 - {str(e)}")
 
     def _build_experience(
         self, parsed_data: Dict[str, Any], raw_content: str, source_type: str

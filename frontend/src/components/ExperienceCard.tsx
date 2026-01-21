@@ -1,13 +1,15 @@
-import { Building2, Calendar, Tag, FileText, Trash2 } from 'lucide-react'
+import { Building2, Calendar, Tag, FileText, Loader2, Sparkles } from 'lucide-react'
 import type { ExperienceListItem } from '../types'
 
 interface ExperienceCardProps {
   experience: ExperienceListItem
   onClick: () => void
   onDelete: (id: string) => void
+  onGenerateAnswers?: (id: string, event: React.MouseEvent) => void
+  isGeneratingAnswers?: boolean
 }
 
-export function ExperienceCard({ experience, onClick, onDelete }: ExperienceCardProps) {
+export function ExperienceCard({ experience, onClick, onDelete, onGenerateAnswers, isGeneratingAnswers }: ExperienceCardProps) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleDateString('zh-CN', {
@@ -26,42 +28,45 @@ export function ExperienceCard({ experience, onClick, onDelete }: ExperienceCard
 
   return (
     <div
-      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500 transition-all cursor-pointer p-6 group"
+      className={`bg-white dark:bg-gray-800 rounded-lg border transition-all cursor-pointer p-6 group relative h-[300px] flex flex-col ${
+        experience.is_generating_answers
+          ? 'border-amber-500 dark:border-amber-500 shadow-lg shadow-amber-500/20 animate-pulse'
+          : 'border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-500'
+      }`}
       onClick={onClick}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          {experience.company_name && (
-            <div className="flex items-center gap-2 mb-2">
-              <Building2 className="w-5 h-5 text-primary-400" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {experience.company_name}
-              </h3>
-              {experience.company_scale && (
-                <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
-                  {experience.company_scale}
-                </span>
-              )}
-            </div>
-          )}
-          {experience.position && (
-            <p className="text-gray-600 dark:text-gray-400 text-sm">{experience.position}</p>
-          )}
+      {/* AI答案生成中指示器 */}
+      {experience.is_generating_answers && (
+        <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-medium shadow-sm z-10">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <span>AI正在生成答案...</span>
         </div>
+      )}
 
-        {/* Delete button */}
-        <button
-          onClick={handleDelete}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-red-500/10 rounded-lg"
-          title="删除"
-        >
-          <Trash2 className="w-4 h-4 text-red-400" />
-        </button>
+      {/* Header - Fixed Section */}
+      <div className="flex-shrink-0 mb-4">
+        {experience.company_name && (
+          <div className="flex items-center gap-2 mb-2">
+            <Building2 className="w-5 h-5 text-primary-400" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {experience.company_name}
+            </h3>
+            {experience.company_scale && (
+              <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                {experience.company_scale}
+              </span>
+            )}
+          </div>
+        )}
+        {experience.position && (
+          <p className="text-gray-600 dark:text-gray-400 text-sm">{experience.position}</p>
+        )}
       </div>
 
-      {/* Metadata */}
-      <div className="flex items-center gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
+      {/* Content Section - Scrollable */}
+      <div className="flex-1 overflow-y-auto space-y-3 mb-3 min-h-0">
+        {/* Metadata */}
+        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
         <div className="flex items-center gap-1">
           <Calendar className="w-4 h-4" />
           <span>{formatDate(experience.created_at)}</span>
@@ -79,41 +84,67 @@ export function ExperienceCard({ experience, onClick, onDelete }: ExperienceCard
         </div>
       </div>
 
-      {/* Tags */}
-      {experience.tags.length > 0 && (
-        <div className="flex items-start gap-2 mb-3">
-          <Tag className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
-          <div className="flex flex-wrap gap-2">
-            {experience.tags.slice(0, 5).map((tag, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 text-xs bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-300 rounded"
-              >
-                {tag}
-              </span>
-            ))}
-            {experience.tags.length > 5 && (
-              <span className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
-                +{experience.tags.length - 5} 更多
-              </span>
-            )}
+        {/* Tags */}
+        {experience.tags.length > 0 && (
+          <div className="flex items-start gap-2">
+            <Tag className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
+            <div className="flex flex-wrap gap-2">
+              {experience.tags.slice(0, 5).map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-1 text-xs bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-300 rounded"
+                >
+                  {tag}
+                </span>
+              ))}
+              {experience.tags.length > 5 && (
+                <span className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+                  +{experience.tags.length - 5} 更多
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Interview Experience */}
-      {experience.interview_experience && (
-        <div className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-750 rounded p-3 border-l-2 border-primary-500">
-          {experience.interview_experience}
-        </div>
-      )}
-
-      {/* Footer info */}
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500">
-        <span>来源: {experience.source_type === 'text' ? '文本' : '图片'}</span>
-        {experience.has_answers && (
-          <span className="text-green-600 dark:text-green-400">✓ 包含答案</span>
         )}
+
+        {/* Interview Experience */}
+        {experience.interview_experience && (
+          <div className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-750 rounded p-3 border-l-2 border-primary-500">
+            {experience.interview_experience}
+          </div>
+        )}
+
+        {/* Notes */}
+        {experience.notes && experience.notes.trim() && (
+          <div className="text-sm text-gray-600 dark:text-gray-400 bg-amber-50 dark:bg-amber-500/10 rounded p-3 border-l-2 border-amber-500">
+            <div className="flex items-start gap-2">
+              <span className="text-amber-600 dark:text-amber-400 font-medium text-xs">备注:</span>
+              <span className="flex-1">{experience.notes}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer - Fixed Section */}
+      <div className="flex-shrink-0 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500">
+        <span>来源: {experience.source_type === 'text' ? '文本' : '图片'}</span>
+        <div className="flex items-center gap-2">
+          {experience.has_answers && (
+            <span className="text-green-600 dark:text-green-400">✓ 包含答案</span>
+          )}
+          {!experience.has_answers && !isGeneratingAnswers && onGenerateAnswers && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onGenerateAnswers(experience.id, e)
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-medium shadow-sm transition-colors"
+              title="为此面经生成AI答案"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              生成答案
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

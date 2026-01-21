@@ -11,6 +11,8 @@ import {
   deleteExperience,
   getStats,
   getGroupedQuestions,
+  generateAnswers,
+  getAnswerGenerationTaskStatus,
 } from '../services/api'
 import { ResultsView } from './ResultsView'
 
@@ -49,6 +51,9 @@ export function ExperienceGallery({ onClose }: ExperienceGalleryProps) {
   const [selectedExperience, setSelectedExperience] = useState<any>(null)
   const [showFilters, setShowFilters] = useState(false)
 
+  // Answer generation tracking
+  const [generatingAnswersFor, setGeneratingAnswersFor] = useState<Map<string, string>>(new Map()) // experienceId -> taskId
+
   useEffect(() => {
     loadData()
     loadFilterOptions()
@@ -58,6 +63,48 @@ export function ExperienceGallery({ onClose }: ExperienceGalleryProps) {
   useEffect(() => {
     loadData()
   }, [companyFilter, selectedTags, timeFilter, stageFilter, viewMode, questionSearch])
+
+  // Poll for answer generation status
+  useEffect(() => {
+    if (generatingAnswersFor.size === 0) return
+
+    const interval = setInterval(async () => {
+      const updates = new Map(generatingAnswersFor)
+      let hasChanges = false
+
+      for (const [experienceId, taskId] of generatingAnswersFor.entries()) {
+        try {
+          const status = await getAnswerGenerationTaskStatus(taskId)
+
+          if (status.status === 'completed' || status.status === 'failed') {
+            updates.delete(experienceId)
+            hasChanges = true
+
+            if (status.status === 'completed') {
+              // If viewing this experience in detail view, refresh it
+              if (selectedExperience && selectedExperience.id === experienceId) {
+                const { experience } = await getExperience(experienceId)
+                setSelectedExperience(experience)
+              } else {
+                // Otherwise refresh the experience list
+                loadData()
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Failed to check task status:', err)
+          updates.delete(experienceId)
+          hasChanges = true
+        }
+      }
+
+      if (hasChanges) {
+        setGeneratingAnswersFor(updates)
+      }
+    }, 3000) // Poll every 3 seconds
+
+    return () => clearInterval(interval)
+  }, [generatingAnswersFor, selectedExperience])
 
   const loadData = async () => {
     try {
@@ -157,6 +204,30 @@ export function ExperienceGallery({ onClose }: ExperienceGalleryProps) {
     )
   }
 
+  const handleGenerateAnswers = async (experienceId: string, event: React.MouseEvent) => {
+    event.stopPropagation() // Prevent card click
+
+    try {
+      const response = await generateAnswers(experienceId)
+
+      if (response.task_id) {
+        // Track this task
+        setGeneratingAnswersFor(prev => new Map(prev).set(experienceId, response.task_id))
+
+        // Update the experience list to show generating state
+        setExperiences(prev =>
+          prev.map(exp =>
+            exp.id === experienceId
+              ? { ...exp, is_generating_answers: true }
+              : exp
+          )
+        )
+      }
+    } catch (err) {
+      alert(`生成答案失败: ${err instanceof Error ? err.message : '未知错误'}`)
+    }
+  }
+
   // Close detail view
   if (selectedExperience) {
     return (
@@ -170,6 +241,20 @@ export function ExperienceGallery({ onClose }: ExperienceGalleryProps) {
               ← 返回列表
             </button>
           </div>
+
+          {/* Show generation indicator if this experience is generating answers */}
+          {generatingAnswersFor.has(selectedExperience.id) && (
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                <div>
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">AI正在生成答案...</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">答案生成完成后将自动刷新显示</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <ResultsView
             experience={selectedExperience}
             processingTime={selectedExperience.processing_time || 0}
@@ -378,9 +463,14 @@ export function ExperienceGallery({ onClose }: ExperienceGalleryProps) {
             {experiences.map((experience) => (
               <ExperienceCard
                 key={experience.id}
-                experience={experience}
+                experience={{
+                  ...experience,
+                  is_generating_answers: generatingAnswersFor.has(experience.id)
+                }}
                 onClick={() => handleCardClick(experience.id)}
                 onDelete={handleDelete}
+                onGenerateAnswers={handleGenerateAnswers}
+                isGeneratingAnswers={generatingAnswersFor.has(experience.id)}
               />
             ))}
           </div>

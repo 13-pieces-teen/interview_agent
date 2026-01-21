@@ -16,6 +16,8 @@ from src.utils.config import Config
 from src.models.schema import InterviewExperience
 from src.utils.database import Database
 from src.validators.content_validator import validate_content
+from src.utils.batch_processor import batch_processor, TaskStatus
+from src.utils.async_task_queue import task_queue, TaskType, Task
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -37,6 +39,93 @@ app.add_middleware(
 config = Config.from_env()
 agent = InterviewAgent(config)
 db = Database()
+
+
+# Initialize async task queue
+def process_task(task: Task) -> Dict:
+    """通用任务处理函数"""
+    try:
+        if task.type == TaskType.TEXT:
+            # 处理文本任务
+            result = agent.process(
+                input_data=task.input_data,
+                export_format=task.export_format,
+            )
+
+            if result.success and result.experience:
+                # 保存到数据库
+                experience_id = db.save_experience(result.experience, task.processing_time)
+
+                return {
+                    "success": True,
+                    "experience_id": experience_id,
+                    "experience": result.experience.model_dump(),
+                    "output_files": result.output_files,
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.error or "Processing failed"
+                }
+
+        elif task.type == TaskType.IMAGE:
+            # 处理图片任务
+            file_paths = task.input_data  # 图片文件路径列表
+
+            try:
+                combined_text = []
+                for idx, file_path in enumerate(file_paths):
+                    try:
+                        text_content, _ = agent.input_handler.process_input(file_path)
+                        combined_text.append(f"=== Image {idx + 1} ===\n{text_content}")
+                    except Exception as e:
+                        combined_text.append(f"=== Image {idx + 1} ===\nError: {str(e)}")
+
+                full_text = "\n\n".join(combined_text)
+
+                # 处理合并后的文本
+                result = agent.process(
+                    input_data=full_text,
+                    export_format=task.export_format,
+                )
+
+                if result.success and result.experience:
+                    experience_id = db.save_experience(result.experience, task.processing_time)
+
+                    return {
+                        "success": True,
+                        "experience_id": experience_id,
+                        "experience": result.experience.model_dump(),
+                        "output_files": result.output_files,
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": result.error or "Processing failed"
+                    }
+
+            finally:
+                # 清理临时文件
+                for file_path in file_paths:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+
+        else:
+            return {
+                "success": False,
+                "error": f"Unknown task type: {task.type}"
+            }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+task_queue.set_process_function(process_task)
+task_queue.start_worker()
+print("✓ 异步任务队列系统已启动")
 
 
 # Request/Response models
@@ -340,6 +429,177 @@ async def process_image(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/process/batch")
+async def process_batch_upload(
+    files: List[UploadFile] = File(...),
+    generate_answers: bool = Form(False),
+    export_format: str = Form("both"),
+):
+    """
+    Create a batch processing task for multiple files (processed sequentially).
+
+    Args:
+        files: List of uploaded files (images or text)
+        generate_answers: Whether to generate missing answers
+        export_format: Export format (json, markdown, or both)
+
+    Returns:
+        Task ID and initial status
+    """
+    try:
+        # Save uploaded files temporarily
+        temp_dir = os.path.join(config.data_dir, "temp")
+        os.makedirs(temp_dir, exist_ok=True)
+
+        temp_file_paths = []
+        file_names = []
+
+        # Save all files
+        for idx, file in enumerate(files):
+            temp_file_path = os.path.join(
+                temp_dir, f"batch_{int(time.time())}_{idx}_{file.filename}"
+            )
+
+            with open(temp_file_path, "wb") as f:
+                content = await file.read()
+                f.write(content)
+
+            temp_file_paths.append(temp_file_path)
+            file_names.append(file.filename)
+
+        # Create batch task
+        task_id = batch_processor.create_batch_task(
+            file_paths=temp_file_paths,
+            file_names=file_names,
+            generate_answers=generate_answers,
+            export_format=export_format
+        )
+
+        # Define processing function for single file
+        def process_single_file(file_path: str, file_name: str, gen_ans: bool, exp_fmt: str) -> Dict:
+            """Process a single file and return result"""
+            try:
+                # Process the file
+                result = agent.process(
+                    input_data=file_path,
+                    export_format=exp_fmt,
+                )
+
+                if result.success and result.experience:
+                    # Calculate processing time (will be updated by batch processor)
+                    processing_time = 0.0
+
+                    # Auto-save to database
+                    experience_id = db.save_experience(result.experience, processing_time)
+
+                    return {
+                        "success": True,
+                        "experience_id": experience_id,
+                        "experience": result.experience.model_dump(),
+                        "output_files": result.output_files,
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": result.error or "Processing failed"
+                    }
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": str(e)
+                }
+
+        # Start batch processing in background
+        batch_processor.start_batch_processing(task_id, process_single_file)
+
+        # Return task info
+        return {
+            "task_id": task_id,
+            "total_files": len(files),
+            "status": "processing",
+            "message": f"Batch processing started for {len(files)} files"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/batch/{task_id}")
+async def get_batch_status(task_id: str):
+    """
+    Get the status of a batch processing task.
+
+    Args:
+        task_id: Task ID returned from batch upload endpoint
+
+    Returns:
+        Detailed batch task status including all sub-tasks
+    """
+    task_status = batch_processor.get_task_status(task_id)
+
+    if task_status is None:
+        raise HTTPException(status_code=404, detail="Batch task not found")
+
+    return task_status
+
+
+@app.get("/api/batch")
+async def list_batch_tasks(status: Optional[str] = None):
+    """
+    List all batch processing tasks.
+
+    Args:
+        status: Optional status filter (pending, processing, completed, failed, cancelled)
+
+    Returns:
+        List of batch tasks
+    """
+    try:
+        status_filter = None
+        if status:
+            try:
+                status_filter = TaskStatus(status)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid status. Must be one of: {', '.join([s.value for s in TaskStatus])}"
+                )
+
+        tasks = batch_processor.get_all_tasks(status_filter)
+        return {"tasks": tasks, "total": len(tasks)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/batch/{task_id}")
+async def cancel_batch_task(task_id: str):
+    """
+    Cancel a pending batch task.
+
+    Args:
+        task_id: Task ID to cancel
+
+    Returns:
+        Cancellation status
+    """
+    success = batch_processor.cancel_task(task_id)
+
+    if not success:
+        task_status = batch_processor.get_task_status(task_id)
+        if task_status is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot cancel task with status: {task_status['status']}"
+            )
+
+    return {"success": True, "message": "Task cancelled successfully"}
+
+
 @app.get("/api/download/{filename}")
 async def download_file(filename: str):
     """
@@ -515,6 +775,7 @@ class UpdateExperienceRequest(BaseModel):
     position: Optional[str] = None
     interview_stage: Optional[str] = None
     interview_experience: Optional[str] = None
+    notes: Optional[str] = None
     tags: Optional[List[str]] = None
     questions: Optional[List[dict]] = None
 
@@ -548,6 +809,8 @@ async def update_experience(experience_id: str, request: UpdateExperienceRequest
             experience.interview_stage = request.interview_stage
         if request.interview_experience is not None:
             experience.interview_experience = request.interview_experience
+        if request.notes is not None:
+            experience.notes = request.notes
         if request.tags is not None:
             experience.tags = request.tags
         if request.questions is not None:
@@ -639,7 +902,7 @@ async def generate_answers_async(experience_id: str):
 
         # Check if there are questions without answers
         questions_without_answers = [
-            q for q in experience.questions if not q.answer or not q.has_original_answer
+            q for q in experience.questions if not q.answer
         ]
 
         if not questions_without_answers:
@@ -720,7 +983,7 @@ def _generate_answers_background(task_id: str, experience_id: str):
         print(f"Error generating answers for task {task_id}: {e}")
 
 
-@app.get("/api/tasks/{task_id}")
+@app.get("/api/tasks/answer-generation/{task_id}")
 async def get_task_status(task_id: str):
     """
     Get the status of an answer generation task.
@@ -770,6 +1033,208 @@ async def get_grouped_questions(
         )
 
         return {"total": len(groups), "groups": groups}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ 异步任务队列 API ============
+
+
+@app.post("/api/process/text/async")
+async def process_text_async(request: ProcessTextRequest):
+    """
+    异步处理文本内容（立即返回任务ID，后台处理）
+
+    Args:
+        request: 文本内容和处理选项
+
+    Returns:
+        任务ID和初始状态
+    """
+    try:
+        # 验证内容
+        is_valid, validation_score, validation_message = validate_content(request.content)
+
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=validation_message)
+
+        # 提交任务到队列
+        task_id = task_queue.submit_task(
+            task_type=TaskType.TEXT,
+            input_data=request.content,
+            generate_answers=request.generate_answers,
+            export_format=request.export_format,
+            metadata={
+                "validation_score": validation_score,
+                "validation_message": validation_message
+            }
+        )
+
+        return {
+            "task_id": task_id,
+            "status": "queued",
+            "message": "任务已提交到队列，将在后台处理"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/process/images/async")
+async def process_images_async(
+    files: List[UploadFile] = File(...),
+    generate_answers: bool = Form(False),
+    export_format: str = Form("both"),
+):
+    """
+    异步处理图片文件（立即返回任务ID，后台处理）
+
+    Args:
+        files: 上传的图片文件列表
+        generate_answers: 是否生成答案
+        export_format: 导出格式
+
+    Returns:
+        任务ID和初始状态
+    """
+    try:
+        # 保存上传的文件到临时目录
+        temp_dir = os.path.join(config.data_dir, "temp")
+        os.makedirs(temp_dir, exist_ok=True)
+
+        temp_file_paths = []
+        file_names = []
+
+        for idx, file in enumerate(files):
+            temp_file_path = os.path.join(
+                temp_dir, f"async_{int(time.time())}_{idx}_{file.filename}"
+            )
+
+            with open(temp_file_path, "wb") as f:
+                content = await file.read()
+                f.write(content)
+
+            temp_file_paths.append(temp_file_path)
+            file_names.append(file.filename)
+
+        # 提交任务到队列
+        task_id = task_queue.submit_task(
+            task_type=TaskType.IMAGE,
+            input_data=temp_file_paths,
+            generate_answers=generate_answers,
+            export_format=export_format,
+            metadata={
+                "file_names": file_names,
+                "file_count": len(files)
+            }
+        )
+
+        return {
+            "task_id": task_id,
+            "status": "queued",
+            "file_count": len(files),
+            "message": f"任务已提交到队列，将处理 {len(files)} 个文件"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/tasks/async")
+async def list_async_tasks(status: Optional[str] = None):
+    """
+    获取所有异步任务列表
+
+    Args:
+        status: 可选，按状态过滤 (queued, processing, completed, failed)
+
+    Returns:
+        任务列表
+    """
+    try:
+        from src.utils.async_task_queue import TaskStatus as AsyncTaskStatus
+
+        status_filter = None
+        if status:
+            # 验证状态值是否有效
+            valid_statuses = {s.value for s in AsyncTaskStatus}
+            if status not in valid_statuses:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+                )
+            # 传递字符串，让 get_all_tasks 内部进行比较
+            status_filter = status
+
+        tasks = task_queue.get_all_tasks(status_filter)
+
+        # 转换为字典列表
+        task_list = []
+        for task in tasks:
+            task_list.append({
+                "id": task.id,
+                "type": task.type.value if hasattr(task.type, 'value') else task.type,
+                "status": task.status.value if hasattr(task.status, 'value') else task.status,
+                "created_at": task.created_at,
+                "started_at": task.started_at,
+                "completed_at": task.completed_at,
+                "processing_time": task.processing_time,
+                "error": task.error,
+                "metadata": task.metadata
+            })
+
+        return {"tasks": task_list, "total": len(task_list)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/tasks/async/{task_id}")
+async def get_async_task_status(task_id: str):
+    """
+    查询异步任务状态
+
+    Args:
+        task_id: 任务ID
+
+    Returns:
+        任务详细状态
+    """
+    task = task_queue.get_task(task_id)
+
+    if task is None:
+        raise HTTPException(status_code=404, detail="任务不存在")
+
+    return {
+        "id": task.id,
+        "type": task.type.value if hasattr(task.type, 'value') else task.type,
+        "status": task.status.value if hasattr(task.status, 'value') else task.status,
+        "created_at": task.created_at,
+        "started_at": task.started_at,
+        "completed_at": task.completed_at,
+        "processing_time": task.processing_time,
+        "result": task.result,
+        "error": task.error,
+        "metadata": task.metadata
+    }
+
+
+@app.get("/api/tasks/queue/info")
+async def get_queue_info():
+    """
+    获取队列统计信息
+
+    Returns:
+        队列状态统计
+    """
+    try:
+        info = task_queue.get_queue_info()
+        return info
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

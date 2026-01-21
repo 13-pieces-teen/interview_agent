@@ -16,6 +16,7 @@ export function EditExperienceModal({ experience, onClose, onSave }: EditExperie
     position: experience.position || '',
     interview_stage: experience.interview_stage || '',
     interview_experience: experience.interview_experience || '',
+    notes: experience.notes || '',
     tags: experience.tags || [],
     questions: experience.questions.map((q) => ({ ...q })),
   })
@@ -196,6 +197,21 @@ export function EditExperienceModal({ experience, onClose, onSave }: EditExperie
                 rows={3}
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:border-primary-500 focus:outline-none text-gray-900 dark:text-white resize-none"
                 placeholder="描述面试体验、流程、氛围等..."
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                备注
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => handleFieldChange('notes', e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-600 rounded-lg focus:border-amber-500 focus:outline-none text-gray-900 dark:text-white resize-none"
+                placeholder="添加个人备注、提醒事项等..."
               />
             </div>
 

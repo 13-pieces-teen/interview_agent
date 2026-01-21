@@ -73,6 +73,13 @@ class Database:
                     ADD COLUMN processing_time REAL DEFAULT 0
                 """
                 )
+            if "notes" not in columns:
+                conn.execute(
+                    """
+                    ALTER TABLE experiences
+                    ADD COLUMN notes TEXT DEFAULT ''
+                """
+                )
 
             # Create indexes for faster queries
             conn.execute(
@@ -106,8 +113,8 @@ class Database:
             ID of the saved experience
         """
         with self._get_connection() as conn:
-            # Check if questions have answers
-            has_answers = any(q.answer for q in experience.questions)
+            # Check if ALL questions have answers
+            has_answers = all(q.answer for q in experience.questions) if experience.questions else False
 
             conn.execute(
                 """
@@ -115,8 +122,8 @@ class Database:
                     id, created_at, source_type, company_name, company_scale,
                     position, interview_stage, interview_experience,
                     questions_json, tags_json, raw_content,
-                    questions_count, has_answers, processing_time
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    questions_count, has_answers, processing_time, notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     experience.id,
@@ -133,6 +140,7 @@ class Database:
                     len(experience.questions),
                     has_answers,
                     processing_time,
+                    experience.notes or "",
                 ),
             )
 
@@ -193,7 +201,7 @@ class Database:
             SELECT
                 id, created_at, source_type, company_name, company_scale,
                 position, interview_stage, interview_experience,
-                tags_json, questions_count, has_answers, processing_time
+                tags_json, questions_count, has_answers, processing_time, notes
             FROM experiences
             WHERE 1=1
         """
@@ -343,6 +351,7 @@ class Database:
             tags=json.loads(row["tags_json"]),
             raw_content=row["raw_content"],
             processing_time=row["processing_time"] if "processing_time" in row.keys() else 0,
+            notes=row["notes"] if "notes" in row.keys() else "",
         )
 
     def get_grouped_questions(

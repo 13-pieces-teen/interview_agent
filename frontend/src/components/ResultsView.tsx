@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { InterviewExperience } from '../types'
-import { Building2, Briefcase, MapPin, Tag, Clock, Edit } from 'lucide-react'
+import { Building2, Briefcase, MapPin, Tag, Edit } from 'lucide-react'
 import { EditExperienceModal } from './EditExperienceModal'
 import { updateExperience } from '../services/api'
 
@@ -36,19 +36,13 @@ export const ResultsView = ({ experience, processingTime, onUpdate }: ResultsVie
         <div className="bg-white dark:bg-gray-900 rounded-xl p-8 border border-gray-200 dark:border-gray-800 transition-colors">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">面经详情</h2>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-800 rounded-lg hover:border-gray-300 dark:hover:border-gray-700 transition-colors flex items-center gap-1.5"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                编辑
-              </button>
-              <span className="text-xs text-gray-400 dark:text-gray-600 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" />
-                {processingTime.toFixed(2)}s
-              </span>
-            </div>
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-800 rounded-lg hover:border-gray-300 dark:hover:border-gray-700 transition-colors flex items-center gap-1.5"
+            >
+              <Edit className="w-3.5 h-3.5" />
+              编辑
+            </button>
           </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -113,6 +107,15 @@ export const ResultsView = ({ experience, processingTime, onUpdate }: ResultsVie
           <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
             <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">整体评价</p>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{currentExperience.interview_experience}</p>
+          </div>
+        )}
+
+        {currentExperience.notes && currentExperience.notes.trim() && (
+          <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-3">备注</p>
+            <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap bg-amber-50 dark:bg-amber-500/10 rounded-lg p-4 border-l-2 border-amber-500">
+              {currentExperience.notes}
+            </div>
           </div>
         )}
       </div>

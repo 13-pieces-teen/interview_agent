@@ -1,7 +1,7 @@
 """Answer Generator Agent for generating answers to interview questions."""
 
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from src.models.schema import Question
 from src.utils.llm_client import SiliconFlowClient
@@ -62,7 +62,7 @@ class AnswerGeneratorAgent:
         """
         self.client = client
 
-    def generate_answers(self, questions: List[Question]) -> List[str]:
+    def generate_answers(self, questions: List[Question]) -> List[Optional[str]]:
         """Generate answers for questions that don't have answers.
 
         Args:
@@ -76,7 +76,7 @@ class AnswerGeneratorAgent:
         indices_to_generate = []
 
         for i, q in enumerate(questions):
-            if not q.answer or not q.has_original_answer:
+            if not q.answer:
                 questions_to_generate.append(q)
                 indices_to_generate.append(i)
 
@@ -98,7 +98,11 @@ class AnswerGeneratorAgent:
 
         # Build result list
         result = []
-        generated_map = {item["question_index"]: item["answer"] for item in generated_answers}
+        try:
+            generated_map = {item["question_index"]: item["answer"] for item in generated_answers}
+        except KeyError as e:
+            # If we still get a KeyError here, it means validation didn't work
+            raise ValueError(f"LLM返回的答案格式不正确，缺少必需字段: {str(e)}")
 
         for i, q in enumerate(questions):
             if i in generated_map:
@@ -153,6 +157,18 @@ class AnswerGeneratorAgent:
 
         try:
             data = json.loads(response)
-            return data.get("answers", [])
+            answers = data.get("answers", [])
+
+            # Validate that each answer has required fields
+            validated_answers = []
+            for item in answers:
+                if not isinstance(item, dict):
+                    continue
+                if "question_index" not in item or "answer" not in item:
+                    # Skip malformed items
+                    continue
+                validated_answers.append(item)
+
+            return validated_answers
         except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse answer generator response: {e}\nResponse: {response}")
+            raise ValueError(f"LLM返回的答案不是有效JSON格式: {str(e)}")

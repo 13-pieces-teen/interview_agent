@@ -45,6 +45,7 @@ class InterviewExperience(BaseModel):
     questions: List[Question] = Field(default_factory=list, description="Questions list")
     tags: List[str] = Field(default_factory=list, description="Overall tags")
     raw_content: str = Field(..., description="Raw input content")
+    notes: Optional[str] = Field(default="", description="User notes")
     processing_time: Optional[float] = Field(
         default=None, description="Processing time in seconds"
     )

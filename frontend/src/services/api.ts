@@ -1,5 +1,14 @@
 import axios from 'axios'
-import type { ProcessResponse, FileInfo, InterviewExperience, ExperienceListItem, ValidationResponse, QuestionGroupsResponse } from '../types'
+import type {
+  ProcessResponse,
+  FileInfo,
+  InterviewExperience,
+  ExperienceListItem,
+  ValidationResponse,
+  QuestionGroupsResponse,
+  AnswerGenerationTaskResponse,
+  AnswerGenerationTaskStatus
+} from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
@@ -201,5 +210,164 @@ export const getGroupedQuestions = async (params?: {
   if (params?.offset) queryParams.append('offset', String(params.offset))
 
   const response = await api.get(`/questions/grouped?${queryParams.toString()}`)
+  return response.data
+}
+
+// Batch processing API functions
+export const processBatch = async (
+  files: File[],
+  generateAnswers: boolean = false,
+  exportFormat: string = 'both'
+): Promise<{ task_id: string; total_files: number; status: string; message: string }> => {
+  const formData = new FormData()
+
+  // Add all files
+  files.forEach((file) => {
+    formData.append('files', file)
+  })
+
+  formData.append('generate_answers', String(generateAnswers))
+  formData.append('export_format', exportFormat)
+
+  const response = await api.post('/process/batch', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    timeout: 30000, // 30 seconds to create batch task
+  })
+  return response.data
+}
+
+export const getBatchStatus = async (taskId: string): Promise<{
+  id: string
+  total_files: number
+  created_at: string
+  status: string
+  current_index: number
+  completed_count: number
+  failed_count: number
+  started_at: string | null
+  completed_at: string | null
+  generate_answers: boolean
+  export_format: string
+  sub_tasks: Array<{
+    id: string
+    file_name: string
+    status: string
+    error: string | null
+    experience_id: string | null
+    started_at: string | null
+    completed_at: string | null
+    processing_time: number
+  }>
+}> => {
+  const response = await api.get(`/batch/${taskId}`)
+  return response.data
+}
+
+export const listBatchTasks = async (status?: string): Promise<{
+  tasks: any[]
+  total: number
+}> => {
+  const queryParams = status ? `?status=${status}` : ''
+  const response = await api.get(`/batch${queryParams}`)
+  return response.data
+}
+
+export const cancelBatchTask = async (taskId: string): Promise<{
+  success: boolean
+  message: string
+}> => {
+  const response = await api.delete(`/batch/${taskId}`)
+  return response.data
+}
+
+// Async task queue API functions
+export const processTextAsync = async (
+  content: string,
+  generateAnswers: boolean = false,
+  exportFormat: string = 'both'
+): Promise<{ task_id: string; status: string; message: string }> => {
+  const response = await api.post('/process/text/async', {
+    content,
+    generate_answers: generateAnswers,
+    export_format: exportFormat,
+  })
+  return response.data
+}
+
+export const processImagesAsync = async (
+  files: File[],
+  generateAnswers: boolean = false,
+  exportFormat: string = 'both'
+): Promise<{ task_id: string; status: string; file_count: number; message: string }> => {
+  const formData = new FormData()
+
+  files.forEach((file) => {
+    formData.append('files', file)
+  })
+
+  formData.append('generate_answers', String(generateAnswers))
+  formData.append('export_format', exportFormat)
+
+  const response = await api.post('/process/images/async', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    timeout: 30000,
+  })
+  return response.data
+}
+
+export const getAsyncTaskStatus = async (taskId: string): Promise<{
+  id: string
+  type: string
+  status: string
+  created_at: string
+  started_at: string | null
+  completed_at: string | null
+  processing_time: number
+  result: any
+  error: string | null
+  metadata: any
+}> => {
+  const response = await api.get(`/tasks/async/${taskId}`)
+  return response.data
+}
+
+export const listAsyncTasks = async (status?: string): Promise<{
+  tasks: any[]
+  total: number
+}> => {
+  const queryParams = status ? `?status=${status}` : ''
+  const response = await api.get(`/tasks/async${queryParams}`)
+  return response.data
+}
+
+export const getQueueInfo = async (): Promise<{
+  total_tasks: number
+  queued: number
+  processing: number
+  completed: number
+  failed: number
+  queue_size: number
+  is_running: boolean
+}> => {
+  const response = await api.get('/tasks/queue/info')
+  return response.data
+}
+
+// Answer generation API functions
+export const generateAnswers = async (
+  experienceId: string
+): Promise<AnswerGenerationTaskResponse> => {
+  const response = await api.post(`/experiences/${experienceId}/generate-answers`)
+  return response.data
+}
+
+export const getAnswerGenerationTaskStatus = async (
+  taskId: string
+): Promise<AnswerGenerationTaskStatus> => {
+  const response = await api.get(`/tasks/answer-generation/${taskId}`)
   return response.data
 }

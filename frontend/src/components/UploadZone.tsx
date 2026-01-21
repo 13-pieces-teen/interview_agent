@@ -1,19 +1,21 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, FileText, Image as ImageIcon, Loader2, X, Clipboard } from 'lucide-react'
+import { Upload, FileText, Image as ImageIcon, Loader2, X, Clipboard, List } from 'lucide-react'
 import clsx from 'clsx'
 
 interface UploadZoneProps {
   onTextSubmit: (text: string) => void
   onImagesSubmit: (files: File[]) => void
+  onBatchSubmit?: (files: File[]) => void
   isProcessing: boolean
 }
 
-export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: UploadZoneProps) => {
+export const UploadZone = ({ onTextSubmit, onImagesSubmit, onBatchSubmit, isProcessing }: UploadZoneProps) => {
   const [inputMode, setInputMode] = useState<'text' | 'image'>('text')
   const [textContent, setTextContent] = useState('')
   const [selectedImages, setSelectedImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [batchMode, setBatchMode] = useState(false) // 批量处理模式
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Handle paste event for images
@@ -104,7 +106,11 @@ export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: Uploa
 
   const handleImagesSubmit = () => {
     if (selectedImages.length > 0 && !isProcessing) {
-      onImagesSubmit(selectedImages)
+      if (batchMode && onBatchSubmit) {
+        onBatchSubmit(selectedImages)
+      } else {
+        onImagesSubmit(selectedImages)
+      }
     }
   }
 
@@ -242,14 +248,41 @@ export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: Uploa
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                   已选择 {selectedImages.length} 张图片
                 </h3>
-                <button
-                  onClick={clearAllImages}
-                  disabled={isProcessing}
-                  className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50"
-                >
-                  清空
-                </button>
+                <div className="flex items-center gap-3">
+                  {/* 批量模式切换 */}
+                  {selectedImages.length > 1 && onBatchSubmit && (
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={batchMode}
+                        onChange={(e) => setBatchMode(e.target.checked)}
+                        disabled={isProcessing}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 disabled:opacity-50"
+                      />
+                      <span className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                        <List className="w-3.5 h-3.5" />
+                        批量模式
+                      </span>
+                    </label>
+                  )}
+                  <button
+                    onClick={clearAllImages}
+                    disabled={isProcessing}
+                    className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors disabled:opacity-50"
+                  >
+                    清空
+                  </button>
+                </div>
               </div>
+
+              {/* 批量模式说明 */}
+              {batchMode && selectedImages.length > 1 && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-xs text-blue-800 dark:text-blue-300">
+                    批量模式：将按照上传顺序依次处理每张图片，可实时查看进度
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                 {selectedImages.map((file, index) => (
@@ -290,8 +323,17 @@ export const UploadZone = ({ onTextSubmit, onImagesSubmit, isProcessing }: Uploa
               </>
             ) : (
               <>
-                <Upload className="w-4 h-4" />
-                处理 {selectedImages.length} 张图片
+                {batchMode && selectedImages.length > 1 ? (
+                  <>
+                    <List className="w-4 h-4" />
+                    批量处理 {selectedImages.length} 张图片（按顺序）
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    处理 {selectedImages.length} 张图片
+                  </>
+                )}
               </>
             )}
           </button>

@@ -18,6 +18,7 @@ export interface InterviewExperience {
   questions: Question[]
   tags: string[]
   raw_content: string
+  notes?: string
   processing_time?: number
 }
 
@@ -57,7 +58,9 @@ export interface ExperienceListItem {
   tags: string[]
   questions_count: number
   has_answers: boolean
+  notes?: string
   processing_time?: number
+  is_generating_answers?: boolean  // 是否正在生成答案
 }
 
 export interface QuestionGroup {
@@ -78,4 +81,21 @@ export interface QuestionGroup {
 export interface QuestionGroupsResponse {
   total: number
   groups: QuestionGroup[]
+}
+
+export interface AnswerGenerationTaskResponse {
+  task_id: string
+  status: string
+  message: string
+  total_questions: number
+}
+
+export interface AnswerGenerationTaskStatus {
+  status: string  // pending, processing, completed, failed
+  experience_id: string
+  progress: number
+  total_questions: number
+  created_at: string
+  completed_at?: string
+  error?: string
 }
