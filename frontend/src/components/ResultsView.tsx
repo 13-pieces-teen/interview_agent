@@ -36,13 +36,15 @@ export const ResultsView = ({ experience, processingTime, onUpdate }: ResultsVie
         <div className="bg-white dark:bg-gray-900 rounded-xl p-8 border border-gray-200 dark:border-gray-800 transition-colors">
           <div className="flex items-start justify-between mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">面经详情</h2>
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-800 rounded-lg hover:border-gray-300 dark:hover:border-gray-700 transition-colors flex items-center gap-1.5"
-            >
-              <Edit className="w-3.5 h-3.5" />
-              编辑
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-800 rounded-lg hover:border-gray-300 dark:hover:border-gray-700 transition-colors flex items-center gap-1.5"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                编辑
+              </button>
+            </div>
           </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

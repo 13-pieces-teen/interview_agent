@@ -103,22 +103,22 @@ const ExportModal: React.FC<ExportModalProps> = ({
               选择导出格式
             </label>
 
-            <div className="flex space-x-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setExportFormat('markdown')}
-                className={`flex-1 p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all ${
                   exportFormat === 'markdown'
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
                 disabled={isExporting}
               >
-                <div className="flex items-center justify-center space-x-2">
+                <div className="flex flex-col items-center space-y-1">
                   <FileText
                     size={20}
                     className={exportFormat === 'markdown' ? 'text-blue-500' : 'text-gray-400'}
                   />
-                  <span className={`font-medium ${exportFormat === 'markdown' ? 'text-blue-700' : 'text-gray-700'}`}>
+                  <span className={`font-medium text-sm ${exportFormat === 'markdown' ? 'text-blue-700' : 'text-gray-700'}`}>
                     Markdown
                   </span>
                 </div>
@@ -129,19 +129,19 @@ const ExportModal: React.FC<ExportModalProps> = ({
                   setExportFormat('excel')
                   setExportType('by_question')
                 }}
-                className={`flex-1 p-3 rounded-lg border-2 transition-all ${
+                className={`p-3 rounded-lg border-2 transition-all ${
                   exportFormat === 'excel'
                     ? 'border-green-500 bg-green-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
                 disabled={isExporting}
               >
-                <div className="flex items-center justify-center space-x-2">
+                <div className="flex flex-col items-center space-y-1">
                   <FileSpreadsheet
                     size={20}
                     className={exportFormat === 'excel' ? 'text-green-500' : 'text-gray-400'}
                   />
-                  <span className={`font-medium ${exportFormat === 'excel' ? 'text-green-700' : 'text-gray-700'}`}>
+                  <span className={`font-medium text-sm ${exportFormat === 'excel' ? 'text-green-700' : 'text-gray-700'}`}>
                     Excel
                   </span>
                 </div>
@@ -150,59 +150,59 @@ const ExportModal: React.FC<ExportModalProps> = ({
           </div>
 
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">
-              选择导出方式
-            </label>
+              <label className="block text-sm font-medium text-gray-700">
+                选择导出方式
+              </label>
 
-            {/* Export by interview */}
-            <button
-              onClick={() => setExportType('by_interview')}
-              className={`w-full p-4 rounded-lg border-2 transition-all ${
-                exportType === 'by_interview'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              } ${exportFormat === 'excel' ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isExporting || exportFormat === 'excel'}
-            >
-              <div className="flex items-start space-x-3">
-                <FileText
-                  size={24}
-                  className={exportType === 'by_interview' ? 'text-blue-500' : 'text-gray-400'}
-                />
-                <div className="flex-1 text-left">
-                  <div className="font-medium text-gray-900">按面经排列</div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    每个面经包含标题、标签和问题列表
-                    {exportFormat === 'excel' && ' (仅支持Markdown)'}
+              {/* Export by interview */}
+              <button
+                onClick={() => setExportType('by_interview')}
+                className={`w-full p-4 rounded-lg border-2 transition-all ${
+                  exportType === 'by_interview'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                } ${exportFormat === 'excel' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isExporting || exportFormat === 'excel'}
+              >
+                <div className="flex items-start space-x-3">
+                  <FileText
+                    size={24}
+                    className={exportType === 'by_interview' ? 'text-blue-500' : 'text-gray-400'}
+                  />
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-gray-900">按面经排列</div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      每个面经包含标题、标签和问题列表
+                      {exportFormat === 'excel' && ' (仅支持Markdown)'}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
+              </button>
 
-            {/* Export by question */}
-            <button
-              onClick={() => setExportType('by_question')}
-              className={`w-full p-4 rounded-lg border-2 transition-all ${
-                exportType === 'by_question'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-              disabled={isExporting}
-            >
-              <div className="flex items-start space-x-3">
-                <List
-                  size={24}
-                  className={exportType === 'by_question' ? 'text-blue-500' : 'text-gray-400'}
-                />
-                <div className="flex-1 text-left">
-                  <div className="font-medium text-gray-900">按题目排列</div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    相同题目分组，显示所有出现的面经
+              {/* Export by question */}
+              <button
+                onClick={() => setExportType('by_question')}
+                className={`w-full p-4 rounded-lg border-2 transition-all ${
+                  exportType === 'by_question'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                disabled={isExporting}
+              >
+                <div className="flex items-start space-x-3">
+                  <List
+                    size={24}
+                    className={exportType === 'by_question' ? 'text-blue-500' : 'text-gray-400'}
+                  />
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-gray-900">按题目排列</div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      相同题目分组，显示所有出现的面经
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
-          </div>
+              </button>
+            </div>
 
           {/* Export scope info */}
           <div className="bg-gray-50 rounded-lg p-4">
@@ -233,9 +233,9 @@ const ExportModal: React.FC<ExportModalProps> = ({
           <div className="bg-blue-50 rounded-lg p-4">
             <div className="text-sm text-blue-900">
               <div className="font-medium mb-2">格式示例:</div>
-              {exportType === 'by_interview' ? (
-                <pre className="text-xs text-blue-800 whitespace-pre-wrap font-mono">
-                  {`## 公司名 - 职位 - 面试阶段
+                {exportType === 'by_interview' ? (
+                  <pre className="text-xs text-blue-800 whitespace-pre-wrap font-mono">
+                    {`## 公司名 - 职位 - 面试阶段
 Tag: xxx, xxxx, xxxx
 
 **问题列表**:
@@ -245,10 +245,10 @@ Tag: xxx, xxxx, xxxx
 
 ### 2. rag流程
 **答案**: ...`}
-                </pre>
-              ) : (
-                <pre className="text-xs text-blue-800 whitespace-pre-wrap font-mono">
-                  {`## 1. 如何维护多异步任务下上下文窗口不被污染
+                  </pre>
+                ) : (
+                  <pre className="text-xs text-blue-800 whitespace-pre-wrap font-mono">
+                    {`## 1. 如何维护多异步任务下上下文窗口不被污染
 **出现次数**: 3
 
 **出现在以下面经**:
@@ -256,10 +256,10 @@ Tag: xxx, xxxx, xxxx
   - 答案: ...
 - 公司B - 后端工程师 - 二面
   - 答案: ...`}
-                </pre>
-              )}
+                  </pre>
+                )}
+              </div>
             </div>
-          </div>
         </div>
 
         {/* Footer */}

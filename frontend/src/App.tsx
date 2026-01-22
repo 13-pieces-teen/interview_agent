@@ -63,7 +63,7 @@ function Layout() {
       </header>
 
       {/* Main Content */}
-      <Outlet context={{ showTaskQueue }} />
+      <Outlet context={{ showTaskQueue, isDark: theme === 'dark' }} />
 
       {/* Footer */}
       <footer className="mt-20 py-8 border-t border-gray-100 dark:border-gray-800">

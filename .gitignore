@@ -65,3 +65,7 @@ frontend/.vite/
 # private markdown files
 一些新想法.md
 面经帮助工具interview_agent.docx
+
+# Tests and docs
+tests/
+docs/

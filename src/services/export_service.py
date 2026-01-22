@@ -1,14 +1,16 @@
 """Export service for generating markdown files from interview experiences."""
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 import io
+import os
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill
 
 from src.models.schema import InterviewExperience, Question
 from src.utils.database import Database
+from src.exporters.feishu_exporter import FeishuExporter
 
 
 class ExportService:
@@ -21,6 +23,35 @@ class ExportService:
             db: Database instance
         """
         self.db = db
+        self._feishu_exporter: Optional[FeishuExporter] = None
+
+    def get_feishu_exporter(self) -> Optional[FeishuExporter]:
+        """Get Feishu exporter instance (lazy initialization).
+
+        Returns:
+            FeishuExporter instance if credentials are configured, None otherwise
+        """
+        if self._feishu_exporter is not None:
+            return self._feishu_exporter
+
+        # Try to initialize from environment variables
+        app_id = os.getenv("FEISHU_APP_ID")
+        app_secret = os.getenv("FEISHU_APP_SECRET")
+        api_base = os.getenv("FEISHU_API_BASE", "https://open.feishu.cn/open-apis")
+
+        if app_id and app_secret:
+            try:
+                self._feishu_exporter = FeishuExporter(
+                    app_id=app_id,
+                    app_secret=app_secret,
+                    api_base=api_base
+                )
+                return self._feishu_exporter
+            except Exception as e:
+                print(f"Warning: Failed to initialize Feishu exporter: {e}")
+                return None
+
+        return None
 
     def export_by_interview(
         self,
@@ -302,3 +333,123 @@ class ExportService:
         wb.save(output)
         output.seek(0)
         return output.getvalue()
+
+    def export_to_feishu(
+        self,
+        experience_ids: Optional[List[str]] = None,
+        company_name: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        folder_token: Optional[str] = None,
+        create_index: bool = True
+    ) -> Dict[str, Any]:
+        """Export experiences to Feishu documents.
+
+        Args:
+            experience_ids: Optional list of specific experience IDs to export
+            company_name: Optional company name filter
+            tags: Optional tags filter
+            folder_token: Optional Feishu folder token to place documents in
+            create_index: Whether to create an index document (default: True)
+
+        Returns:
+            Dictionary with export results
+
+        Raises:
+            Exception: If Feishu is not configured or export fails
+        """
+        feishu = self.get_feishu_exporter()
+        if not feishu:
+            raise Exception(
+                "Feishu exporter is not configured. "
+                "Please set FEISHU_APP_ID and FEISHU_APP_SECRET in your .env file."
+            )
+
+        # Get experiences
+        if experience_ids:
+            experiences = [self.db.get_experience(exp_id) for exp_id in experience_ids]
+            experiences = [exp for exp in experiences if exp is not None]
+        else:
+            result = self.db.list_experiences(
+                company_name=company_name,
+                tags=tags,
+                limit=1000,
+            )
+            experiences = [self.db.get_experience(exp["id"]) for exp in result]
+            experiences = [exp for exp in experiences if exp is not None]
+
+        if not experiences:
+            return {
+                "total": 0,
+                "successful": 0,
+                "failed": 0,
+                "results": [],
+                "message": "No experiences found to export"
+            }
+
+        # Export to Feishu
+        return feishu.export_multiple_to_feishu(
+            experiences=experiences,
+            folder_token=folder_token,
+            create_index=create_index
+        )
+
+    def export_single_to_feishu(
+        self,
+        experience_id: str,
+        folder_token: Optional[str] = None
+    ) -> Dict[str, str]:
+        """Export a single experience to Feishu document.
+
+        Args:
+            experience_id: Experience ID to export
+            folder_token: Optional Feishu folder token
+
+        Returns:
+            Dictionary with document_id, document_url, and title
+
+        Raises:
+            Exception: If Feishu is not configured or export fails
+        """
+        feishu = self.get_feishu_exporter()
+        if not feishu:
+            raise Exception(
+                "Feishu exporter is not configured. "
+                "Please set FEISHU_APP_ID and FEISHU_APP_SECRET in your .env file."
+            )
+
+        experience = self.db.get_experience(experience_id)
+        if not experience:
+            raise Exception(f"Experience {experience_id} not found")
+
+        return feishu.export_to_feishu(experience, folder_token)
+
+    def test_feishu_connection(self) -> Dict[str, Any]:
+        """Test Feishu API connection.
+
+        Returns:
+            Dictionary with connection status
+
+        Raises:
+            Exception: If connection test fails
+        """
+        feishu = self.get_feishu_exporter()
+        if not feishu:
+            return {
+                "configured": False,
+                "connected": False,
+                "message": "Feishu is not configured. Please set FEISHU_APP_ID and FEISHU_APP_SECRET."
+            }
+
+        try:
+            feishu.test_connection()
+            return {
+                "configured": True,
+                "connected": True,
+                "message": "Successfully connected to Feishu API"
+            }
+        except Exception as e:
+            return {
+                "configured": True,
+                "connected": False,
+                "message": f"Failed to connect: {str(e)}"
+            }

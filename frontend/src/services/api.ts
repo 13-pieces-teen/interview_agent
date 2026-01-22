@@ -434,3 +434,26 @@ export const exportExcel = async (params: {
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
+
+// ============ API Configuration ============
+
+export interface ApiConfig {
+  siliconflow_api_key: string
+  siliconflow_api_base: string
+  deepseek_model: string
+  glm_vision_model: string
+}
+
+export const getApiConfig = async (): Promise<ApiConfig> => {
+  const response = await api.get('/config')
+  return response.data
+}
+
+export const updateApiConfig = async (config: Partial<ApiConfig>): Promise<{
+  success: boolean
+  message: string
+  config: ApiConfig
+}> => {
+  const response = await api.put('/config', config)
+  return response.data
+}

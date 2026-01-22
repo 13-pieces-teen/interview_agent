@@ -1167,6 +1167,96 @@ async def export_excel(request: ExportRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============ Feishu Export API ============
+
+
+@app.get("/api/feishu/status")
+async def check_feishu_status():
+    """
+    Check if Feishu export is configured and test connection.
+
+    Returns:
+        Feishu configuration and connection status
+    """
+    try:
+        status = export_service.test_feishu_connection()
+        return status
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class FeishuExportRequest(BaseModel):
+    """Request model for Feishu export."""
+
+    experience_ids: Optional[List[str]] = Field(default=None, description="Specific experience IDs to export")
+    company_name: Optional[str] = Field(default=None, description="Filter by company name")
+    tags: Optional[List[str]] = Field(default=None, description="Filter by tags")
+    folder_token: Optional[str] = Field(default=None, description="Feishu folder token to place documents in")
+    create_index: bool = Field(default=True, description="Create an index document")
+
+
+@app.post("/api/export/feishu")
+async def export_to_feishu(request: FeishuExportRequest):
+    """
+    Export interview experiences to Feishu documents.
+
+    Args:
+        request: Export configuration
+
+    Returns:
+        Export results with document links
+    """
+    try:
+        result = export_service.export_to_feishu(
+            experience_ids=request.experience_ids,
+            company_name=request.company_name,
+            tags=request.tags,
+            folder_token=request.folder_token,
+            create_index=request.create_index
+        )
+
+        return result
+
+    except Exception as e:
+        if "not configured" in str(e).lower():
+            raise HTTPException(
+                status_code=400,
+                detail=str(e)
+            )
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/experiences/{experience_id}/export/feishu")
+async def export_single_experience_to_feishu(
+    experience_id: str,
+    folder_token: Optional[str] = None
+):
+    """
+    Export a single interview experience to Feishu document.
+
+    Args:
+        experience_id: ID of the experience to export
+        folder_token: Optional Feishu folder token
+
+    Returns:
+        Document information with link
+    """
+    try:
+        result = export_service.export_single_to_feishu(
+            experience_id=experience_id,
+            folder_token=folder_token
+        )
+
+        return result
+
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        elif "not configured" in str(e).lower():
+            raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # ============ 异步任务队列 API ============
 
@@ -1365,6 +1455,166 @@ async def get_queue_info():
     try:
         info = task_queue.get_queue_info()
         return info
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ API Configuration Endpoints ============
+
+
+class ApiConfigResponse(BaseModel):
+    """Response model for API configuration (masked)."""
+
+    siliconflow_api_key: str = Field(..., description="Masked API key")
+    siliconflow_api_base: str
+    deepseek_model: str
+    glm_vision_model: str
+
+
+class UpdateApiConfigRequest(BaseModel):
+    """Request model for updating API configuration."""
+
+    siliconflow_api_key: Optional[str] = None
+    siliconflow_api_base: Optional[str] = None
+    deepseek_model: Optional[str] = None
+    glm_vision_model: Optional[str] = None
+
+
+@app.get("/api/config", response_model=ApiConfigResponse)
+async def get_api_config():
+    """
+    Get current API configuration (with masked API key).
+
+    Returns:
+        Current configuration with masked API key
+    """
+    try:
+        # Mask API key (show only last 4 characters)
+        api_key = config.siliconflow_api_key
+        masked_key = ""
+        if api_key:
+            if len(api_key) > 8:
+                masked_key = "*" * (len(api_key) - 4) + api_key[-4:]
+            else:
+                masked_key = "*" * len(api_key)
+
+        return ApiConfigResponse(
+            siliconflow_api_key=masked_key,
+            siliconflow_api_base=config.siliconflow_api_base,
+            deepseek_model=config.deepseek_model,
+            glm_vision_model=config.glm_vision_model,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/config")
+async def update_api_config(request: UpdateApiConfigRequest):
+    """
+    Update API configuration.
+
+    Args:
+        request: Configuration updates
+
+    Returns:
+        Success message and updated configuration
+    """
+    global config, agent
+
+    try:
+        # Update environment variables
+        updated = False
+
+        if request.siliconflow_api_key is not None:
+            os.environ["SILICONFLOW_API_KEY"] = request.siliconflow_api_key
+            config.siliconflow_api_key = request.siliconflow_api_key
+            updated = True
+
+        if request.siliconflow_api_base is not None:
+            os.environ["SILICONFLOW_API_BASE"] = request.siliconflow_api_base
+            config.siliconflow_api_base = request.siliconflow_api_base
+            updated = True
+
+        if request.deepseek_model is not None:
+            os.environ["DEEPSEEK_MODEL"] = request.deepseek_model
+            config.deepseek_model = request.deepseek_model
+            updated = True
+
+        if request.glm_vision_model is not None:
+            os.environ["GLM_VISION_MODEL"] = request.glm_vision_model
+            config.glm_vision_model = request.glm_vision_model
+            updated = True
+
+        if updated:
+            # Reinitialize the agent with new config
+            agent = InterviewAgent(config)
+
+            # Update .env file
+            env_path = ".env"
+            if os.path.exists(env_path):
+                # Read existing .env
+                with open(env_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+
+                # Update values
+                new_lines = []
+                keys_updated = set()
+
+                for line in lines:
+                    if "=" in line and not line.strip().startswith("#"):
+                        key = line.split("=")[0].strip()
+                        if key == "SILICONFLOW_API_KEY" and request.siliconflow_api_key is not None:
+                            new_lines.append(f"SILICONFLOW_API_KEY={request.siliconflow_api_key}\n")
+                            keys_updated.add("SILICONFLOW_API_KEY")
+                        elif key == "SILICONFLOW_API_BASE" and request.siliconflow_api_base is not None:
+                            new_lines.append(f"SILICONFLOW_API_BASE={request.siliconflow_api_base}\n")
+                            keys_updated.add("SILICONFLOW_API_BASE")
+                        elif key == "DEEPSEEK_MODEL" and request.deepseek_model is not None:
+                            new_lines.append(f"DEEPSEEK_MODEL={request.deepseek_model}\n")
+                            keys_updated.add("DEEPSEEK_MODEL")
+                        elif key == "GLM_VISION_MODEL" and request.glm_vision_model is not None:
+                            new_lines.append(f"GLM_VISION_MODEL={request.glm_vision_model}\n")
+                            keys_updated.add("GLM_VISION_MODEL")
+                        else:
+                            new_lines.append(line)
+                    else:
+                        new_lines.append(line)
+
+                # Add missing keys
+                if request.siliconflow_api_key is not None and "SILICONFLOW_API_KEY" not in keys_updated:
+                    new_lines.append(f"SILICONFLOW_API_KEY={request.siliconflow_api_key}\n")
+                if request.siliconflow_api_base is not None and "SILICONFLOW_API_BASE" not in keys_updated:
+                    new_lines.append(f"SILICONFLOW_API_BASE={request.siliconflow_api_base}\n")
+                if request.deepseek_model is not None and "DEEPSEEK_MODEL" not in keys_updated:
+                    new_lines.append(f"DEEPSEEK_MODEL={request.deepseek_model}\n")
+                if request.glm_vision_model is not None and "GLM_VISION_MODEL" not in keys_updated:
+                    new_lines.append(f"GLM_VISION_MODEL={request.glm_vision_model}\n")
+
+                # Write back to .env
+                with open(env_path, "w", encoding="utf-8") as f:
+                    f.writelines(new_lines)
+
+        # Mask API key for response
+        api_key = config.siliconflow_api_key
+        masked_key = ""
+        if api_key:
+            if len(api_key) > 8:
+                masked_key = "*" * (len(api_key) - 4) + api_key[-4:]
+            else:
+                masked_key = "*" * len(api_key)
+
+        return {
+            "success": True,
+            "message": "Configuration updated successfully",
+            "config": {
+                "siliconflow_api_key": masked_key,
+                "siliconflow_api_base": config.siliconflow_api_base,
+                "deepseek_model": config.deepseek_model,
+                "glm_vision_model": config.glm_vision_model,
+            },
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
