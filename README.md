@@ -1,540 +1,247 @@
 <div align="center">
 
-# Interview Agent
+# Interview Agent 面经整理助手
 
-English | [![简体中文](https://img.shields.io/badge/docs-简体中文-blue)](README_CN.md)
+[![English](https://img.shields.io/badge/docs-English-blue)](README.md) | 简体中文
 
 </div>
 
-🎯 **AI-Powered Interview Experience Management System**
+🎯 **AI 驱动的面试经验管理系统**
 
-Transform unstructured interview content (text or images) into organized, searchable knowledge with intelligent tagging, answer generation, and multi-format export capabilities.
+将非结构化的面试内容（文本或图片）转换为有组织、可搜索的知识库，支持智能标签、答案生成和多格式导出。
+---
 
-## 🌟 Key Features
+## ✨ 核心功能
 
-### Core Capabilities
-- 📝 **Multi-modal Input** - Process text and images with advanced OCR
-- 🤖 **AI-Powered Processing** - Automatic extraction, tagging, and answer generation
-- 💾 **Persistent Storage** - SQLite database with full CRUD operations
-- 🔄 **Async Processing** - Background task queue for large-scale operations
-- 📦 **Batch Processing** - Process multiple files with progress tracking
-- 🔍 **Smart Search** - Filter by company, tags, dates, and more
+- 📝 **多模态输入** - 支持文本和图片处理，配备 OCR 识别
+- 🤖 **AI 智能处理** - 自动提取、标签化和答案生成
+- 🔄 **异步处理** - 后台任务队列，处理大规模操作
+- 📦 **批量处理** - 支持多文件处理，实时进度跟踪
+- 🔍 **智能搜索** - 按公司、标签、日期等条件过滤
+- 📤 **多格式导出** - JSON、Markdown、Excel 三种格式
 
-### Export Options
-- 📄 **JSON** - Structured data export
-- 📝 **Markdown** - Two modes (by interview or by question)
-- 📊 **Excel** - Spreadsheet format with filtering
+## 🚀 快速开始
 
-### Web Interface
-- 🎨 **Modern React UI** - Clean, responsive design with dark mode
-- 📤 **Drag & Drop** - Easy file upload and batch processing
-- 📊 **Gallery View** - Browse and manage saved experiences
-- ✏️ **In-place Editing** - Edit experiences directly in the UI
-- 📈 **Real-time Progress** - Task queue monitoring and status tracking
+### 环境要求
 
-## 🚀 Quick Start
-
-### Prerequisites
 - Python 3.10+
 - uv
 - Node.js 18+
-- SiliconFlow API key ([Get one here](https://cloud.siliconflow.cn/i/AlhX2oWk))
+- SiliconFlow API 密钥（[点击获取](https://cloud.siliconflow.cn/i/AlhX2oWk)）
 
-### 1. Installation
+### 安装步骤
 
+**1. 克隆项目**
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd interview_agent
+```
 
-# Install backend dependencies
+**2. 安装Python后端依赖**
+```bash
 uv sync
+```
 
-# Install frontend dependencies
+**3. 安装前端依赖**
+```bash
 cd frontend
 npm install
 cd ..
 ```
 
-### 2. Configuration
+**4. 配置环境变量**
 
-Create a `.env` file in the project root:
-
+复制环境变量模板：
 ```bash
 cp .env.example .env
 ```
 
-**Required Configuration:**
-
+编辑 `.env` 文件，添加您的 API 密钥：
 ```env
-# SiliconFlow API (Required)
-SILICONFLOW_API_KEY=your_siliconflow_api_key_here
+SILICONFLOW_API_KEY=你的硅基流动API密钥
 ```
 
-**Optional Configuration:**
+### 运行应用
 
-```env
-# API Settings (defaults shown)
-SILICONFLOW_API_BASE=https://api.siliconflow.cn/v1
-DEEPSEEK_MODEL=Pro/deepseek-ai/DeepSeek-V3.2
-GLM_VISION_MODEL=zai-org/GLM-4.6V
+#### 🎨 Web 界面（推荐）
 
-# Storage Directories
-OUTPUT_DIR=output
-DATA_DIR=data
-
-
-### 3. Run the Application
-
-#### 🎯 Web Interface (Recommended)
-
-**Windows:**
+**Windows 系统：**
 ```bash
 start_dev.bat
 ```
 
-**Linux/Mac:**
+**Linux/Mac 系统：**
 ```bash
 chmod +x start_dev.sh
 ./start_dev.sh
 ```
 
-This starts:
-- 🔧 Backend API: http://localhost:8000
-- 🎨 Frontend UI: http://localhost:5173
+启动后访问：
+- 🔧 后端 API：http://localhost:8000
+- 🎨 前端界面：http://localhost:5173
+---
 
-#### 🖥️ CLI Mode
+## 📖 使用指南
 
-```bash
-# Activate virtual environment
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+### Web 界面操作流程
 
-# Run the CLI agent
-python src/main.py
-```
+1. **处理面试内容**
+   - 访问 http://localhost:5173
+   - 选择文本输入或拖拽上传图片
+   - 可选启用 AI 答案生成
+   - 提交并查看实时结果
 
-#### 🔌 API Only
+2. **管理面试经验**
+   - 访问 Gallery 页面查看所有保存的面经
+   - 按公司、标签、日期筛选
+   - 在线编辑或删除经验
+   - 查看跨多次面试的问题分组
 
-```bash
-source .venv/bin/activate
-python -m uvicorn src.api.app:app --reload --port 8000
+3. **导出数据**
+   - 使用导出弹窗选择格式和筛选条件
+   - 下载 JSON、Markdown 或 Excel 文件
+   - 支持批量导出和自动编号
 
-# Access interactive API docs at http://localhost:8000/docs
-```
-
-## 📖 Usage Guide
-
-### Web Interface Workflow
-
-1. **Process Interview Content**
-   - Navigate to http://localhost:5173
-   - Choose text input or drag & drop images
-   - Optionally enable AI answer generation
-   - Submit and view real-time results
-
-2. **Manage Experiences**
-   - Visit the Gallery page to view all saved interviews
-   - Filter by company, tags, or date range
-   - Edit or delete experiences inline
-   - View grouped questions across multiple interviews
-
-3. **Export Data**
-   - Use the Export modal to choose format and filters
-   - Download JSON, Markdown, or Excel files
-   - Batch export with automatic indexing
-
-### CLI Workflow
+### 命令行操作流程
 
 ```bash
 python src/main.py
 ```
 
-Follow the interactive prompts:
-1. Paste text or provide image path
-2. Choose whether to generate AI answers
-3. View processed results in terminal
+按照交互式提示操作：
+1. 粘贴文本或提供图片路径
+2. 选择是否生成 AI 答案
+3. 在终端查看处理结果
 
-### API Usage
+### API 调用示例
 
-#### Process Text
+**处理文本内容：**
 ```bash
 curl -X POST "http://localhost:8000/api/process/text" \
   -H "Content-Type: application/json" \
-  -d '{"content": "your interview text here", "generate_answers": false}'
+  -d '{"content": "您的面试文本内容", "generate_answers": false}'
 ```
 
-#### Process Image
+**处理图片：**
 ```bash
 curl -X POST "http://localhost:8000/api/process/image" \
-  -F "file=@interview_screenshot.png" \
+  -F "file=@面试截图.png" \
   -F "generate_answers=false"
 ```
 
-#### List Experiences
+**查询面经：**
 ```bash
-curl "http://localhost:8000/api/experiences?company=Google&limit=10"
+curl "http://localhost:8000/api/experiences?company=字节跳动&limit=10"
 ```
 
+---
 
-### Programmatic Usage
+## 🏗️ 技术架构
 
-```python
-from src.main import InterviewAgent
-from src.utils.config import Config
+### 核心技术栈
 
-# Initialize
-config = Config.from_env()
-agent = InterviewAgent(config)
+**后端：**
+- Python 3.10+ / FastAPI（现代异步 Web 框架）
+- SQLite（持久化存储）
+- LangChain（LLM 编排）
+- DeepSeek-V3.2（文本处理）
+- GLM-4.6V（图片 OCR）
 
-# Process interview
-result = agent.process(
-    input_data="Your interview experience text...",
-    generate_answers=True,
-    export_format="both"
-)
+**前端：**
+- React 18 + TypeScript
+- Vite（快速构建工具）
+- Tailwind CSS（样式框架）
+- React Router（路由）
 
-if result.success:
-    print(f"✅ Processed in {result.processing_time:.2f}s")
-    print(f"📝 {len(result.experience.questions)} questions extracted")
-    print(f"🏢 Company: {result.experience.company_name}")
-else:
-    print(f"❌ Error: {result.error}")
-```
-
-## 🏗️ Architecture
-
-### System Design
+### 处理流程
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Frontend (React)                        │
-│  ┌──────────┬──────────────┬──────────────┬──────────────┐  │
-│  │   Home   │   Gallery    │   Detail     │   Export     │  │
-│  │   Page   │    Page      │    Page      │    Modal     │  │
-│  └──────────┴──────────────┴──────────────┴──────────────┘  │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ REST API
-┌──────────────────────────┴──────────────────────────────────┐
-│                   Backend (FastAPI)                          │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  API Layer (70+ endpoints)                           │   │
-│  │  • Processing (sync/async)  • CRUD operations        │   │
-│  │  • Batch tasks              • Export services        │   │
-│  │  • Answer generation        • Configuration          │   │
-│  └─────┬─────────────┬────────────────┬──────────────┬──┘   │
-│        │             │                │              │       │
-│  ┌─────▼──┐    ┌────▼─────┐    ┌─────▼─────┐  ┌────▼────┐ │
-│  │ Input  │    │   Core   │    │  Answer   │  │ Export  │ │
-│  │Handler │    │Processor │    │Generator  │  │Services │ │
-│  └────────┘    └──────────┘    └───────────┘  └─────────┘ │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  Infrastructure Layer                                │   │
-│  │  • Database (SQLite)      • Task Queue (Async)       │   │
-│  │  • LLM Client             • Batch Processor          │   │
-│  │  • Feishu Exporter        • Configuration Manager    │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+输入（文本/图片）
+    ↓
+图片？→ OCR 识别（GLM-4.6V）→ 提取文本
+    ↓
+DeepSeek-V3.2 智能处理
+    ├─ 提取结构化数据（公司、职位、问题）
+    ├─ 清理和标准化内容
+    ├─ 生成智能标签
+    └─ 可选：生成缺失的答案
+    ↓
+保存到数据库
+    ↓
+导出选项（JSON / Markdown / Excel）
 ```
 
-### Processing Pipeline
+---
 
-```
-Input (Text/Image)
-    │
-    ├─ Image? → OCR (GLM-4.6V) → Extract Text
-    │
-    ▼
-DeepSeek-V3.2 Agent
-    ├─ Extract structured data (company, position, questions)
-    ├─ Clean and normalize content
-    ├─ Generate intelligent tags
-    └─ Optional: Generate missing answers
-    │
-    ▼
-Save to Database
-    │
-    ▼
-Export Options
-    ├─ JSON (structured data)
-    ├─ Markdown (interview/question grouped)
-    ├─ Excel (spreadsheet)
-    └─ Feishu (cloud documents)
-```
-
-## 📂 Project Structure
+## 📂 项目结构
 
 ```
 interview_agent/
-├── src/                          # Backend source code
-│   ├── api/
-│   │   └── app.py               # FastAPI application (70+ endpoints)
-│   ├── agents/
-│   │   ├── core_processor.py    # Main extraction agent
-│   │   └── answer_generator.py  # Answer generation agent
-│   ├── exporters/
-│   │   ├── exporter.py          # JSON/Markdown exporter
-│   │   └── feishu_exporter.py   # Feishu cloud exporter
-│   ├── handlers/
-│   │   └── input_handler.py     # Text/Image input handler
-│   ├── models/
-│   │   └── schema.py            # Pydantic data models
-│   ├── prompts/
-│   │   └── prompts.py           # LLM prompts
-│   ├── services/
-│   │   └── export_service.py    # Export orchestration
-│   ├── utils/
-│   │   ├── async_task_queue.py  # Async task queue system
-│   │   ├── batch_processor.py   # Batch processing engine
-│   │   ├── config.py            # Configuration management
-│   │   ├── database.py          # SQLite database layer
-│   │   └── llm_client.py        # SiliconFlow API client
-│   └── main.py                  # CLI entry point
+├── src/                      # 后端源代码
+│   ├── api/app.py           # FastAPI 应用（70+ 接口）
+│   ├── agents/              # AI 智能体
+│   ├── exporters/           # 导出服务
+│   ├── handlers/            # 输入处理
+│   ├── models/              # 数据模型
+│   ├── utils/               # 工具函数
+│   └── main.py              # 命令行入口
 │
-├── frontend/                     # React frontend
+├── frontend/                 # React 前端
 │   ├── src/
-│   │   ├── pages/
-│   │   │   ├── HomePage.tsx              # Main processing UI
-│   │   │   ├── GalleryPage.tsx           # Experience gallery
-│   │   │   └── ExperienceDetailPage.tsx  # Detail viewer
-│   │   ├── components/
-│   │   │   ├── UploadZone.tsx            # File upload
-│   │   │   ├── ResultsView.tsx           # Results display
-│   │   │   ├── ExportModal.tsx           # Export dialog
-│   │   │   ├── ApiKeyConfig.tsx          # API configuration
-│   │   │   ├── TaskQueue.tsx             # Task monitoring
-│   │   │   └── QuestionGroupView.tsx     # Question grouping
-│   │   ├── services/
-│   │   │   └── api.ts                    # API client
-│   │   ├── types/                        # TypeScript types
-│   │   └── App.tsx                       # Main app + routing
+│   │   ├── pages/           # 页面组件
+│   │   ├── components/      # UI 组件
+│   │   ├── services/        # API 客户端
+│   │   └── App.tsx          # 主应用
 │   └── package.json
 │
-├── tests/                        # Unit tests
-│   ├── test_feishu_export.py
-│   └── ...
-│
-├── docs/                         # Documentation
-│   ├── FEISHU_EXPORT.md         # Feishu setup guide
-│   ├── FEISHU_QUICKSTART.md     # Quick start guide
-│   └── ...
-│
-├── data/                         # SQLite database
-│   └── interviews.db
-│
-├── output/                       # Generated exports
-│
-├── .env.example                  # Environment template
-├── pyproject.toml               # Python dependencies
-├── start_dev.bat                # Windows dev script
-├── start_dev.sh                 # Linux/Mac dev script
-└── README.md                    # This file
+├── data/                     # SQLite 数据库
+├── output/                   # 导出文件
+├── .env.example             # 环境变量模板
+├── pyproject.toml           # Python 依赖
+├── start_dev.bat            # Windows 启动脚本
+└── start_dev.sh             # Linux/Mac 启动脚本
 ```
 
-## 🔌 API Endpoints
+---
 
-### Processing (8 endpoints)
-- `POST /api/process/text` - Process text content (sync)
-- `POST /api/process/image` - Process single image (sync)
-- `POST /api/process/images` - Process multiple images (sync)
-- `POST /api/process/text/async` - Process text (async)
-- `POST /api/process/images/async` - Process images (async)
-- `POST /api/validate` - Validate content quality
-- `POST /api/process/batch` - Create batch processing task
-- `GET /api/batch/{task_id}` - Get batch task status
+## 🔌 API 文档
 
-### Database CRUD (10 endpoints)
-- `GET /api/experiences` - List with filters & pagination
-- `GET /api/experiences/{id}` - Get specific experience
-- `PUT /api/experiences/{id}` - Update experience
-- `DELETE /api/experiences/{id}` - Delete experience
-- `GET /api/tags` - Get all unique tags
-- `GET /api/companies` - Get all companies
-- `GET /api/stats` - Database statistics
-- `GET /api/questions/grouped` - Group identical questions
+运行应用后访问交互式 API 文档：
+**http://localhost:8000/docs**
 
-### Export (6 endpoints)
-- `POST /api/export` - Export to Markdown
-- `POST /api/export/excel` - Export to Excel
-- `POST /api/export/feishu` - Batch export to Feishu
-- `POST /api/experiences/{id}/export/feishu` - Single to Feishu
-- `GET /api/feishu/status` - Check Feishu connection
-- `GET /api/download/{filename}` - Download file
+包含 70+ 接口，涵盖：
+- 处理接口（文本/图片/批量）
+- 数据库 CRUD 操作
+- 导出服务
+- 答案生成
+- 任务队列管理
+- 配置管理
 
-### Answer Generation (3 endpoints)
-- `POST /api/experiences/{id}/generate-answers` - Start generation
-- `GET /api/tasks/answer-generation/{task_id}` - Get status
-- `GET /api/tasks/answer-generation` - List all tasks
+---
 
-### Task Queue (3 endpoints)
-- `GET /api/tasks/async` - List async tasks
-- `GET /api/tasks/async/{task_id}` - Get task status
-- `GET /api/tasks/queue/info` - Queue statistics
+## 🛠️ 开发指南
 
-### Configuration (2 endpoints)
-- `GET /api/config` - Get API configuration (masked)
-- `PUT /api/config` - Update API configuration
-
-### Utility (2 endpoints)
-- `GET /` - Health check
-- `GET /health` - Health check
-
-📚 **Full API Documentation**: http://localhost:8000/docs (when running)
-
-## 🛠️ Technology Stack
-
-### Backend
-| Technology | Purpose |
-|------------|---------|
-| **Python 3.10+** | Core language |
-| **FastAPI** | Modern async web framework |
-| **Pydantic** | Data validation and serialization |
-| **SQLite** | Persistent data storage |
-| **LangChain** | LLM orchestration framework |
-| **DeepSeek-V3.2** | Text processing and extraction |
-| **GLM-4.6V** | Image OCR and vision |
-| **OpenPyXL** | Excel file generation |
-
-### Frontend
-| Technology | Purpose |
-|------------|---------|
-| **React 18** | UI library |
-| **TypeScript** | Type-safe JavaScript |
-| **Vite** | Fast build tool |
-| **Tailwind CSS** | Utility-first CSS framework |
-| **React Router** | Client-side routing |
-| **Axios** | HTTP client |
-| **React Dropzone** | File upload component |
-| **Lucide React** | Icon library |
-
-## 📊 Database Schema
-
-### Experiences Table
-```sql
-CREATE TABLE experiences (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    company_name TEXT,
-    company_scale TEXT,
-    interview_stage TEXT,
-    questions TEXT,              -- JSON array
-    tags TEXT,                   -- JSON array
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
-);
-
--- Indexes for performance
-CREATE INDEX idx_company ON experiences(company_name);
-CREATE INDEX idx_scale ON experiences(company_scale);
-CREATE INDEX idx_created ON experiences(created_at);
-```
-
-## 🎯 Advanced Features
-
-### 1. Async Processing
-Process large batches in the background without blocking:
-```python
-# Start async task
-response = requests.post('/api/process/text/async', json={
-    'content': large_text,
-    'generate_answers': True
-})
-task_id = response.json()['task_id']
-
-# Check status
-status = requests.get(f'/api/tasks/async/{task_id}')
-```
-
-### 2. Batch Processing
-Process multiple files sequentially with progress tracking:
-```python
-files = ['interview1.png', 'interview2.png', 'interview3.png']
-response = requests.post('/api/process/batch', files=files)
-batch_id = response.json()['task_id']
-
-# Monitor progress
-progress = requests.get(f'/api/batch/{batch_id}')
-print(f"Progress: {progress.json()['current']}/{progress.json()['total']}")
-```
-
-### 3. Question Grouping
-Find recurring interview questions:
-```python
-# Get grouped questions
-grouped = requests.get('/api/questions/grouped', params={
-    'company': 'Google',
-    'min_occurrences': 2
-})
-
-for group in grouped.json()['groups']:
-    print(f"Question: {group['question_text']}")
-    print(f"Asked {group['occurrence_count']} times")
-```
-
-### 4. Smart Filtering
-Filter experiences with complex queries:
-```python
-experiences = requests.get('/api/experiences', params={
-    'company': 'Google',
-    'scale': '大型企业',
-    'stage': '技术一面',
-    'tags': '算法,系统设计',
-    'start_date': '2025-01-01',
-    'limit': 20
-})
-```
-
-### 5. Feishu Integration
-Export to cloud with one click:
-```python
-# Check Feishu connection
-status = requests.get('/api/feishu/status')
-
-# Export all experiences
-result = requests.post('/api/export/feishu', json={
-    'folder_token': 'your_folder_token',
-    'create_index': True
-})
-```
-
-## 🔧 Development
-
-### Backend Development
-
+### 后端开发
 ```bash
-# Start API with auto-reload
 python -m uvicorn src.api.app:app --reload --port 8000
 ```
 
-### Frontend Development
-
+### 前端开发
 ```bash
 cd frontend
-# Start dev server with hot reload
 npm run dev
-
 ```
 
-### Full Stack Development
+### 全栈开发
+同时启动前后端（使用 `start_dev.bat` 或 `start_dev.sh`）
 
-Run both backend and frontend simultaneously:
+---
 
-**Windows:**
-```bash
-start_dev.bat
-```
+## 📄 许可证
 
-**Linux/Mac:**
-```bash
-./start_dev.sh
-```
+MIT License
 
+## 📞 支持
 
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 📞 Support
-
-- 🐛 [Issue Tracker](https://github.com/your-repo/issues)
-- 💬 [Discussions](https://github.com/your-repo/discussions)
-
+- 🐛 [问题反馈](https://github.com/your-repo/issues)
+- 💬 [讨论区](https://github.com/your-repo/discussions)

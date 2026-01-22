@@ -1081,6 +1081,9 @@ class ExportRequest(BaseModel):
     experience_ids: Optional[List[str]] = Field(default=None, description="Specific experience IDs to export")
     company_name: Optional[str] = Field(default=None, description="Filter by company name")
     tags: Optional[List[str]] = Field(default=None, description="Filter by tags")
+    start_date: Optional[str] = Field(default=None, description="Filter by start date (ISO format)")
+    end_date: Optional[str] = Field(default=None, description="Filter by end date (ISO format)")
+    interview_stage: Optional[str] = Field(default=None, description="Filter by interview stage")
 
 
 @app.post("/api/export")
