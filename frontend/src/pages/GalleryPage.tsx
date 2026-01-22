@@ -32,7 +32,9 @@ export function GalleryPage() {
   // Filters
   const [companyFilter, setCompanyFilter] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [timeFilter, setTimeFilter] = useState<'all' | '7d' | '30d' | '90d'>('all')
+  const [timeFilter, setTimeFilter] = useState<'all' | 'today' | '3d' | '7d' | '30d' | '90d' | 'custom'>('all')
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
   const [stageFilter, setStageFilter] = useState('')
   const [questionSearch, setQuestionSearch] = useState('')
 
@@ -61,7 +63,7 @@ export function GalleryPage() {
 
   useEffect(() => {
     loadData()
-  }, [companyFilter, selectedTags, timeFilter, stageFilter, viewMode, questionSearch])
+  }, [companyFilter, selectedTags, timeFilter, stageFilter, viewMode, questionSearch, customStartDate, customEndDate])
 
   // Poll for answer generation status
   useEffect(() => {
@@ -137,15 +139,42 @@ export function GalleryPage() {
 
   // Helper to convert time range preset to ISO date strings
   const convertTimeRangeToDateStrings = (
-    timeRange: 'all' | '7d' | '30d' | '90d'
+    timeRange: 'all' | 'today' | '3d' | '7d' | '30d' | '90d' | 'custom'
   ): { startDate?: string; endDate?: string } => {
     if (timeRange === 'all') {
       return { startDate: undefined, endDate: undefined }
     }
 
+    if (timeRange === 'custom') {
+      // Use custom date range
+      const start = customStartDate ? new Date(customStartDate + 'T00:00:00') : undefined
+      const end = customEndDate ? new Date(customEndDate + 'T23:59:59') : undefined
+
+      return {
+        startDate: start?.toISOString(),
+        endDate: end?.toISOString(),
+      }
+    }
+
     const now = new Date()
-    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90
-    const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+    const start = new Date()
+
+    // Set start time to beginning of the day
+    start.setHours(0, 0, 0, 0)
+
+    if (timeRange === 'today') {
+      // Today: from 00:00:00 to 23:59:59
+      const endOfDay = new Date()
+      endOfDay.setHours(23, 59, 59, 999)
+      return {
+        startDate: start.toISOString(),
+        endDate: endOfDay.toISOString(),
+      }
+    }
+
+    // For other presets, subtract days
+    const days = timeRange === '3d' ? 3 : timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90
+    start.setDate(now.getDate() - days)
 
     return {
       startDate: start.toISOString(),
@@ -224,6 +253,8 @@ export function GalleryPage() {
     setCompanyFilter('')
     setSelectedTags([])
     setTimeFilter('all')
+    setCustomStartDate('')
+    setCustomEndDate('')
     setStageFilter('')
     setQuestionSearch('')
   }
@@ -354,25 +385,67 @@ export function GalleryPage() {
                     <Calendar className="w-3.5 h-3.5" />
                     时间范围
                   </label>
-                  <div className="flex gap-2">
-                    {[
-                      { value: 'all', label: '全部' },
-                      { value: '7d', label: '7天' },
-                      { value: '30d', label: '30天' },
-                      { value: '90d', label: '90天' },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => setTimeFilter(option.value as any)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          timeFilter === option.value
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-700'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
+                  <div className="space-y-3">
+                    {/* Preset buttons */}
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: 'all', label: '全部' },
+                        { value: 'today', label: '今天' },
+                        { value: '3d', label: '3天' },
+                        { value: '7d', label: '7天' },
+                        { value: '30d', label: '30天' },
+                        { value: '90d', label: '90天' },
+                        { value: 'custom', label: '自定义' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            setTimeFilter(option.value as any)
+                            // Clear custom dates when switching to preset
+                            if (option.value !== 'custom') {
+                              setCustomStartDate('')
+                              setCustomEndDate('')
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            timeFilter === option.value
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-800 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-700'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Custom date range picker */}
+                    {timeFilter === 'custom' && (
+                      <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+                        <div className="flex-1">
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            开始日期
+                          </label>
+                          <input
+                            type="date"
+                            value={customStartDate}
+                            onChange={(e) => setCustomStartDate(e.target.value)}
+                            className="w-full px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                          />
+                        </div>
+                        <span className="text-gray-400 dark:text-gray-600 mt-5">-</span>
+                        <div className="flex-1">
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            结束日期
+                          </label>
+                          <input
+                            type="date"
+                            value={customEndDate}
+                            onChange={(e) => setCustomEndDate(e.target.value)}
+                            className="w-full px-2 py-1 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -482,6 +555,8 @@ export function GalleryPage() {
           companyName: companyFilter || undefined,
           tags: selectedTags.length > 0 ? selectedTags : undefined,
           timeRange: timeFilter,
+          customStartDate: customStartDate || undefined,
+          customEndDate: customEndDate || undefined,
           stage: stageFilter || undefined,
         }}
       />

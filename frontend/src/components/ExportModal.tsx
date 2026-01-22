@@ -9,7 +9,9 @@ interface ExportModalProps {
   currentFilters?: {
     companyName?: string
     tags?: string[]
-    timeRange?: 'all' | '7d' | '30d' | '90d'
+    timeRange?: 'all' | 'today' | '3d' | '7d' | '30d' | '90d' | 'custom'
+    customStartDate?: string
+    customEndDate?: string
     stage?: string
   }
 }
@@ -29,15 +31,42 @@ const ExportModal: React.FC<ExportModalProps> = ({
 
   // Helper to convert time range preset to ISO date strings
   const convertTimeRangeToDateStrings = (
-    timeRange?: 'all' | '7d' | '30d' | '90d'
+    timeRange?: 'all' | 'today' | '3d' | '7d' | '30d' | '90d' | 'custom'
   ): { startDate?: string; endDate?: string } => {
     if (!timeRange || timeRange === 'all') {
       return { startDate: undefined, endDate: undefined }
     }
 
+    if (timeRange === 'custom') {
+      // Use custom date range from props
+      const start = currentFilters?.customStartDate ? new Date(currentFilters.customStartDate + 'T00:00:00') : undefined
+      const end = currentFilters?.customEndDate ? new Date(currentFilters.customEndDate + 'T23:59:59') : undefined
+
+      return {
+        startDate: start?.toISOString(),
+        endDate: end?.toISOString(),
+      }
+    }
+
     const now = new Date()
-    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90
-    const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+    const start = new Date()
+
+    // Set start time to beginning of the day
+    start.setHours(0, 0, 0, 0)
+
+    if (timeRange === 'today') {
+      // Today: from 00:00:00 to 23:59:59
+      const endOfDay = new Date()
+      endOfDay.setHours(23, 59, 59, 999)
+      return {
+        startDate: start.toISOString(),
+        endDate: endOfDay.toISOString(),
+      }
+    }
+
+    // For other presets, subtract days
+    const days = timeRange === '3d' ? 3 : timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90
+    start.setDate(now.getDate() - days)
 
     return {
       startDate: start.toISOString(),
@@ -51,7 +80,14 @@ const ExportModal: React.FC<ExportModalProps> = ({
 
     // Time range
     if (currentFilters?.timeRange && currentFilters.timeRange !== 'all') {
-      const timeLabels = { '7d': '最近7天', '30d': '最近30天', '90d': '最近90天' }
+      const timeLabels = {
+        'today': '今天',
+        '3d': '最近3天',
+        '7d': '最近7天',
+        '30d': '最近30天',
+        '90d': '最近90天',
+        'custom': '自定义时间'
+      }
       filters.push(timeLabels[currentFilters.timeRange])
     }
 
