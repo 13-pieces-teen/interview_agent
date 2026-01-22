@@ -2,13 +2,14 @@
 
 # Interview Agent 面经整理助手
 
-[![English](https://img.shields.io/badge/docs-English-blue)](README.md) | 简体中文
+[![English](https://img.shields.io/badge/docs-English-blue)](README_EN.md) | 简体中文
 
 </div>
 
 🎯 **AI 驱动的面试经验管理系统**
 
-将非结构化的面试内容（文本或图片）转换为有组织、可搜索的知识库，支持智能标签、答案生成和多格式导出。
+- 全程使用Claude code进行 vibe coding，练习产物
+- 将非结构化的面试内容（文本或图片）转换为有组织、可搜索的知识库，支持智能标签、答案生成和多格式导出。
 ---
 
 ## ✨ 核心功能
@@ -27,7 +28,7 @@
 - Python 3.10+
 - uv
 - Node.js 18+
-- SiliconFlow API 密钥（[点击获取](https://cloud.siliconflow.cn/i/AlhX2oWk)）
+- SiliconFlow API 密钥（[点击获取](https://cloud.siliconflow.cn/i/AlhX2oWk)）欢迎注册使用我的邀请码AlhX2oWk！
 
 ### 安装步骤
 

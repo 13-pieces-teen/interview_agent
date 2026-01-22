@@ -58,6 +58,9 @@ class ExportService:
         experience_ids: Optional[List[str]] = None,
         company_name: Optional[str] = None,
         tags: Optional[List[str]] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interview_stage: Optional[str] = None,
     ) -> str:
         """Export experiences organized by interview (面经排列).
 
@@ -65,6 +68,9 @@ class ExportService:
             experience_ids: Optional list of specific experience IDs to export
             company_name: Optional company name filter
             tags: Optional tags filter
+            start_date: Optional start date filter (ISO format)
+            end_date: Optional end date filter (ISO format)
+            interview_stage: Optional interview stage filter
 
         Returns:
             Markdown formatted string
@@ -77,6 +83,9 @@ class ExportService:
             result = self.db.list_experiences(
                 company_name=company_name,
                 tags=tags,
+                start_date=start_date,
+                end_date=end_date,
+                interview_stage=interview_stage,
                 limit=1000,
             )
             experiences = [self.db.get_experience(exp["id"]) for exp in result]
@@ -98,12 +107,18 @@ class ExportService:
         self,
         company_name: Optional[str] = None,
         tags: Optional[List[str]] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interview_stage: Optional[str] = None,
     ) -> str:
         """Export questions grouped by question text (题目排列).
 
         Args:
             company_name: Optional company name filter
             tags: Optional tags filter
+            start_date: Optional start date filter (ISO format)
+            end_date: Optional end date filter (ISO format)
+            interview_stage: Optional interview stage filter
 
         Returns:
             Markdown formatted string
@@ -112,6 +127,9 @@ class ExportService:
         groups = self.db.get_grouped_questions(
             company_name=company_name,
             tags=tags,
+            start_date=start_date,
+            end_date=end_date,
+            interview_stage=interview_stage,
             limit=1000,
         )
 
@@ -256,12 +274,18 @@ class ExportService:
         self,
         company_name: Optional[str] = None,
         tags: Optional[List[str]] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interview_stage: Optional[str] = None,
     ) -> bytes:
         """Export questions to Excel format.
 
         Args:
             company_name: Optional company name filter
             tags: Optional tags filter
+            start_date: Optional start date filter (ISO format)
+            end_date: Optional end date filter (ISO format)
+            interview_stage: Optional interview stage filter
 
         Returns:
             Excel file content as bytes
@@ -270,6 +294,9 @@ class ExportService:
         groups = self.db.get_grouped_questions(
             company_name=company_name,
             tags=tags,
+            start_date=start_date,
+            end_date=end_date,
+            interview_stage=interview_stage,
             limit=1000,
         )
 

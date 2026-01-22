@@ -1103,12 +1103,18 @@ async def export_markdown(request: ExportRequest):
                 experience_ids=request.experience_ids,
                 company_name=request.company_name,
                 tags=request.tags,
+                start_date=request.start_date,
+                end_date=request.end_date,
+                interview_stage=request.interview_stage,
             )
             filename = f"interviews_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
         elif request.export_type == "by_question":
             markdown_content = export_service.export_by_question(
                 company_name=request.company_name,
                 tags=request.tags,
+                start_date=request.start_date,
+                end_date=request.end_date,
+                interview_stage=request.interview_stage,
             )
             filename = f"questions_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
         else:
@@ -1150,6 +1156,9 @@ async def export_excel(request: ExportRequest):
         excel_content = export_service.export_questions_to_excel(
             company_name=request.company_name,
             tags=request.tags,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            interview_stage=request.interview_stage,
         )
 
         filename = f"questions_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"

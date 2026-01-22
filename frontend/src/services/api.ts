@@ -384,12 +384,18 @@ export const exportMarkdown = async (params: {
   experienceIds?: string[]
   companyName?: string
   tags?: string[]
+  startDate?: string
+  endDate?: string
+  interviewStage?: string
 }): Promise<{ content: string; filename: string }> => {
   const response = await api.post('/export', {
     export_type: params.exportType,
     experience_ids: params.experienceIds,
     company_name: params.companyName,
     tags: params.tags,
+    start_date: params.startDate,
+    end_date: params.endDate,
+    interview_stage: params.interviewStage,
   })
   return response.data
 }
@@ -398,6 +404,9 @@ export const exportExcel = async (params: {
   exportType: 'by_interview' | 'by_question'
   companyName?: string
   tags?: string[]
+  startDate?: string
+  endDate?: string
+  interviewStage?: string
 }): Promise<void> => {
   const response = await api.post(
     '/export/excel',
@@ -405,6 +414,9 @@ export const exportExcel = async (params: {
       export_type: params.exportType,
       company_name: params.companyName,
       tags: params.tags,
+      start_date: params.startDate,
+      end_date: params.endDate,
+      interview_stage: params.interviewStage,
     },
     {
       responseType: 'blob', // Important for binary data

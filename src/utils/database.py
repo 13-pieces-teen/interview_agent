@@ -359,6 +359,9 @@ class Database:
         search: Optional[str] = None,
         tags: Optional[List[str]] = None,
         company_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interview_stage: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> List[Dict[str, Any]]:
@@ -369,6 +372,9 @@ class Database:
             search: Search query for question text
             tags: Filter by tags
             company_name: Filter by company name
+            start_date: Filter by start date (ISO format)
+            end_date: Filter by end date (ISO format)
+            interview_stage: Filter by interview stage
             limit: Maximum number of groups to return
             offset: Offset for pagination
 
@@ -376,14 +382,30 @@ class Database:
             List of question groups with occurrences
         """
         with self._get_connection() as conn:
-            # Get all experiences
-            cursor = conn.execute(
-                """
+            # Build query with filters
+            query = """
                 SELECT id, created_at, company_name, position, interview_stage, questions_json
                 FROM experiences
-                ORDER BY created_at DESC
+                WHERE 1=1
             """
-            )
+            params = []
+
+            if start_date:
+                query += " AND created_at >= ?"
+                params.append(start_date)
+
+            if end_date:
+                query += " AND created_at <= ?"
+                params.append(end_date)
+
+            if interview_stage:
+                query += " AND interview_stage = ?"
+                params.append(interview_stage)
+
+            query += " ORDER BY created_at DESC"
+
+            # Get filtered experiences
+            cursor = conn.execute(query, params)
             rows = cursor.fetchall()
 
         # Group questions
