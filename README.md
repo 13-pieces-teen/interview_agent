@@ -84,6 +84,9 @@ chmod +x start_dev.sh
 
 ## 📖 使用指南
 
+![alt text](showcase1.png)
+![alt text](showcase2.png)
+
 ### Web 界面操作流程
 
 1. **处理面试内容**

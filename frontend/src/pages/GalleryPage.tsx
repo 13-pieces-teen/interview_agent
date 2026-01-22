@@ -135,6 +135,23 @@ export function GalleryPage() {
     restoreGeneratingState()
   }, []) // Empty dependency array - run only on mount
 
+  // Helper to convert time range preset to ISO date strings
+  const convertTimeRangeToDateStrings = (
+    timeRange: 'all' | '7d' | '30d' | '90d'
+  ): { startDate?: string; endDate?: string } => {
+    if (timeRange === 'all') {
+      return { startDate: undefined, endDate: undefined }
+    }
+
+    const now = new Date()
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90
+    const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+
+    return {
+      startDate: start.toISOString(),
+      endDate: now.toISOString(),
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -142,13 +159,7 @@ export function GalleryPage() {
       setError(null)
 
       if (viewMode === 'experiences') {
-        let startDate: string | undefined
-        if (timeFilter !== 'all') {
-          const now = new Date()
-          const days = timeFilter === '7d' ? 7 : timeFilter === '30d' ? 30 : 90
-          const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
-          startDate = start.toISOString()
-        }
+        const { startDate } = convertTimeRangeToDateStrings(timeFilter)
 
         const { experiences: data } = await listExperiences({
           companyName: companyFilter || undefined,
@@ -470,6 +481,8 @@ export function GalleryPage() {
         currentFilters={{
           companyName: companyFilter || undefined,
           tags: selectedTags.length > 0 ? selectedTags : undefined,
+          timeRange: timeFilter,
+          stage: stageFilter || undefined,
         }}
       />
     </div>

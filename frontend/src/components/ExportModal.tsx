@@ -9,6 +9,8 @@ interface ExportModalProps {
   currentFilters?: {
     companyName?: string
     tags?: string[]
+    timeRange?: 'all' | '7d' | '30d' | '90d'
+    stage?: string
   }
 }
 
@@ -25,10 +27,64 @@ const ExportModal: React.FC<ExportModalProps> = ({
 
   if (!isOpen) return null
 
+  // Helper to convert time range preset to ISO date strings
+  const convertTimeRangeToDateStrings = (
+    timeRange?: 'all' | '7d' | '30d' | '90d'
+  ): { startDate?: string; endDate?: string } => {
+    if (!timeRange || timeRange === 'all') {
+      return { startDate: undefined, endDate: undefined }
+    }
+
+    const now = new Date()
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90
+    const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+
+    return {
+      startDate: start.toISOString(),
+      endDate: now.toISOString(),
+    }
+  }
+
+  // Build concise filter summary for display
+  const buildFilterSummary = (): string => {
+    const filters: string[] = []
+
+    // Time range
+    if (currentFilters?.timeRange && currentFilters.timeRange !== 'all') {
+      const timeLabels = { '7d': '最近7天', '30d': '最近30天', '90d': '最近90天' }
+      filters.push(timeLabels[currentFilters.timeRange])
+    }
+
+    // Interview stage
+    if (currentFilters?.stage) {
+      filters.push(currentFilters.stage)
+    }
+
+    // Tags - show first 2 + count if more
+    if (currentFilters?.tags && currentFilters.tags.length > 0) {
+      const tagDisplay = currentFilters.tags.length <= 2
+        ? currentFilters.tags.join(', ')
+        : `${currentFilters.tags.slice(0, 2).join(', ')} +${currentFilters.tags.length - 2}`
+      filters.push(tagDisplay)
+    }
+
+    // Company name
+    if (currentFilters?.companyName) {
+      filters.push(currentFilters.companyName)
+    }
+
+    return filters.length > 0 ? filters.join(', ') : ''
+  }
+
+  const filterSummary = buildFilterSummary()
+
   const handleExport = async () => {
     try {
       setIsExporting(true)
       setError(null)
+
+      // Convert time range to date strings
+      const { startDate, endDate } = convertTimeRangeToDateStrings(currentFilters?.timeRange)
 
       if (exportFormat === 'excel') {
         // Excel export - only supports by_question
@@ -42,6 +98,9 @@ const ExportModal: React.FC<ExportModalProps> = ({
           exportType,
           companyName: currentFilters?.companyName,
           tags: currentFilters?.tags,
+          startDate,
+          endDate,
+          interviewStage: currentFilters?.stage,
         })
 
         onClose()
@@ -52,6 +111,9 @@ const ExportModal: React.FC<ExportModalProps> = ({
           experienceIds: selectedExperienceIds,
           companyName: currentFilters?.companyName,
           tags: currentFilters?.tags,
+          startDate,
+          endDate,
+          interviewStage: currentFilters?.stage,
         })
 
         // Create a download link
@@ -205,28 +267,30 @@ const ExportModal: React.FC<ExportModalProps> = ({
             </div>
 
           {/* Export scope info */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-sm text-gray-700">
-              <div className="font-medium mb-2">导出范围:</div>
-              <ul className="space-y-1 text-gray-600">
-                {selectedExperienceIds && selectedExperienceIds.length > 0 ? (
-                  <li>• 已选择 {selectedExperienceIds.length} 条面经</li>
-                ) : (
-                  <>
-                    {currentFilters?.companyName && (
-                      <li>• 公司: {currentFilters.companyName}</li>
-                    )}
-                    {currentFilters?.tags && currentFilters.tags.length > 0 && (
-                      <li>• 标签: {currentFilters.tags.join(', ')}</li>
-                    )}
-                    {!currentFilters?.companyName &&
-                      (!currentFilters?.tags || currentFilters.tags.length === 0) && (
-                        <li>• 所有面经</li>
-                      )}
-                  </>
-                )}
-              </ul>
-            </div>
+          {/* Export scope information */}
+          <div className="bg-blue-50 rounded-lg p-4">
+            <p className="text-sm text-gray-700">
+              <strong className="text-gray-900">导出范围: </strong>
+              {selectedExperienceIds && selectedExperienceIds.length > 0 ? (
+                <>
+                  已选择 {selectedExperienceIds.length} 条
+                  {filterSummary && (
+                    <span className="ml-2 text-blue-700">
+                      | 筛选: {filterSummary}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  所有面经
+                  {filterSummary && (
+                    <span className="ml-2 text-blue-700">
+                      | 筛选: {filterSummary}
+                    </span>
+                  )}
+                </>
+              )}
+            </p>
           </div>
 
           {/* Format preview */}
