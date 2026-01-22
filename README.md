@@ -495,39 +495,17 @@ result = requests.post('/api/export/feishu', json={
 ### Backend Development
 
 ```bash
-# Run tests
-uv run pytest
-
-# Code formatting
-uv run black src/
-uv run ruff check src/
-
 # Start API with auto-reload
 python -m uvicorn src.api.app:app --reload --port 8000
-
-# Run specific test
-uv run pytest tests/test_feishu_export.py -v
 ```
 
 ### Frontend Development
 
 ```bash
 cd frontend
-
 # Start dev server with hot reload
 npm run dev
 
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Lint code
-npm run lint
-
-# Type check
-npm run type-check
 ```
 
 ### Full Stack Development
@@ -544,84 +522,13 @@ start_dev.bat
 ./start_dev.sh
 ```
 
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**1. API Key Error**
-```
-Error: SILICONFLOW_API_KEY not found
-```
-Solution: Add your API key to `.env` file
-
-**2. Database Locked**
-```
-Error: database is locked
-```
-Solution: Close other connections or restart the backend
-
-**3. Feishu Export Failed**
-```
-Error: Feishu credentials not configured
-```
-Solution: Add `FEISHU_APP_ID` and `FEISHU_APP_SECRET` to `.env`
-
-**4. Frontend Build Errors**
-```
-Error: Cannot find module 'vite'
-```
-Solution: Run `npm install` in the `frontend/` directory
-
-## 📝 Configuration Reference
-
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `SILICONFLOW_API_KEY` | ✅ Yes | - | SiliconFlow API authentication |
-| `SILICONFLOW_API_BASE` | ❌ No | `https://api.siliconflow.cn/v1` | API base URL |
-| `DEEPSEEK_MODEL` | ❌ No | `Pro/deepseek-ai/DeepSeek-V3.2` | Text processing model |
-| `GLM_VISION_MODEL` | ❌ No | `zai-org/GLM-4.6V` | Image OCR model |
-| `OUTPUT_DIR` | ❌ No | `output` | Export output directory |
-| `DATA_DIR` | ❌ No | `data` | Database directory |
-| `FEISHU_APP_ID` | ❌ No | - | Feishu app ID (for export) |
-| `FEISHU_APP_SECRET` | ❌ No | - | Feishu app secret (for export) |
-| `FEISHU_API_BASE` | ❌ No | `https://open.feishu.cn/open-apis` | Feishu API base URL |
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow PEP 8 for Python code
-- Use TypeScript for all frontend code
-- Write tests for new features
-- Update documentation as needed
 
 ## 📄 License
 
 MIT License - see LICENSE file for details
 
-## 🙏 Acknowledgments
-
-- **DeepSeek** - For the powerful V3.2 language model
-- **SiliconFlow** - For providing LLM API infrastructure
-- **Feishu (Lark)** - For document collaboration platform
-- **FastAPI** - For the amazing web framework
-- **React** - For the excellent UI library
-
 ## 📞 Support
 
-- 📖 [Documentation](docs/)
 - 🐛 [Issue Tracker](https://github.com/your-repo/issues)
 - 💬 [Discussions](https://github.com/your-repo/discussions)
 
----
-
-**Built with ❤️ using AI-powered technology**
