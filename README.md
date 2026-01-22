@@ -1,4 +1,10 @@
+<div align="center">
+
 # Interview Agent
+
+English | [![简体中文](https://img.shields.io/badge/docs-简体中文-blue)](README_CN.md)
+
+</div>
 
 🎯 **AI-Powered Interview Experience Management System**
 
